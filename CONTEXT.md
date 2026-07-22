@@ -77,7 +77,7 @@ src/
 
 | 화면 | 상태 |
 |---|---|
-| 로그인 | 🟡 구현 완료, 실제 백엔드 연동 테스트 전 |
+| 로그인 | ✅ 완료 (실제 백엔드 연동 검증됨) |
 | 대시보드 | ⬜ placeholder만 |
 | 출석 세션 관리 | ⬜ placeholder만 |
 | 출석 현황 | ⬜ placeholder만 |
@@ -109,11 +109,15 @@ src/
   - `VITE_API_BASE_URL=/api`(상대경로, axios가 실제로 호출) + `VITE_API_PROXY_TARGET=http://YOUR_EC2_PUBLIC_IP:8080`(vite.config.ts server.proxy가 실제 전달할 주소)로 env 분리
   - 이 우회는 `npm run dev` 개발 서버에서만 동작. 나중에 실제로 프론트를 배포하면 결국 **백엔드 CORS 허용 목록에 배포된 프론트 origin을 추가하거나 리버스 프록시로 묶어야 함** (백엔드 저장소의 `cors.allowed-origins`/`application-prod.yml` 쪽 작업, 이 프론트 프로젝트 범위 밖)
 
+- STEP 5 최종 확인 (2026-07-23): 백엔드에서 CORS 허용 origin에 5173 추가 완료, 로그인 실제 연동 성공
+  - **`ApiResponse<T>` = `{ success, data, message }` 추정이 정확히 맞았음** (더 이상 가정 아님, 검증 완료)
+  - `LoginResponse`에 `expiresIn`(3600), `tokenType`("Bearer"), `user`(id/username/name/role/passwordChanged) 추가 — 실제 응답 기준으로 타입 보강, `src/types/user.ts` 신설
+  - **username은 이메일이 아니라 그냥 문자열**("admin") — Figma의 "이메일" 라벨/placeholder는 실제와 다르지만 UI는 시안 그대로 둠 (기능엔 영향 없음, `type="text"`라 문제 없음)
+  - 로그인 성공 시 `user` 정보도 `localStorage`에 같이 저장하도록 추가 (다음 화면에서 관리자 이름 표시 등에 사용)
+
 ## 다음 작업
 
-1. STEP 5 후속: Vite 프록시로 로그인 재시도 — `ApiResponse<T>` 실제 형태, username이 이메일인지 확인
-2. (별도, 백엔드 저장소) EC2 배포 백엔드의 CORS 허용 origin에 프론트 배포 주소 추가 필요
-3. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
+1. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
 
 ## 결정 사항 히스토리
 
