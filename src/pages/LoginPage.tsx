@@ -33,6 +33,7 @@ const LoginPage = () => {
       // 필요해지면 그때 추가 (지금은 단순하게 항상 localStorage에 저장)
       localStorage.setItem('accessToken', data.accessToken)
       localStorage.setItem('refreshToken', data.refreshToken)
+      localStorage.setItem('user', JSON.stringify(data.user))
       navigate('/')
     },
   })
@@ -43,8 +44,8 @@ const LoginPage = () => {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    // 백엔드 로그인은 username(학번/관리자 계정 식별자) 기준 - Figma 시안엔 "이메일"로 표기돼 있어
-    // 관리자 계정의 username 자체를 이메일 형태로 쓰는 걸로 가정. 실제 연동 때 확인 필요
+    // 2026-07-23 확인: 실제 관리자 계정 username은 "admin"처럼 평범한 문자열이고 이메일 형식이 아님
+    // (Figma 시안엔 "이메일"로 표기돼 있지만 백엔드는 그냥 username 문자열을 받음 - UI 라벨/placeholder는 시안 유지)
     loginMutation.mutate({ username, password })
   }
 
