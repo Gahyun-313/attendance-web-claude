@@ -105,10 +105,15 @@ src/
   - "비밀번호를 잊으셨나요?", "회원가입" 링크는 백엔드에 해당 API가 없어 비활성 처리
   - Tailwind v4.1+에서 `bg-gradient-to-br`가 제거되고 `bg-linear-to-br`로 이름이 바뀐 걸 검색으로 확인하고 반영 (안 그러면 그라디언트가 안 나왔을 것)
 
+- STEP 5 후속 (2026-07-23): 로그인 실제 테스트 중 CORS 에러 발생(EC2 백엔드가 localhost:5173을 허용 origin으로 안 열어준 상태로 추정, Postman은 브라우저가 아니라 CORS 검사 자체를 안 받아서 정상 응답했던 것) → **Vite dev 프록시로 임시 우회**
+  - `VITE_API_BASE_URL=/api`(상대경로, axios가 실제로 호출) + `VITE_API_PROXY_TARGET=http://YOUR_EC2_PUBLIC_IP:8080`(vite.config.ts server.proxy가 실제 전달할 주소)로 env 분리
+  - 이 우회는 `npm run dev` 개발 서버에서만 동작. 나중에 실제로 프론트를 배포하면 결국 **백엔드 CORS 허용 목록에 배포된 프론트 origin을 추가하거나 리버스 프록시로 묶어야 함** (백엔드 저장소의 `cors.allowed-origins`/`application-prod.yml` 쪽 작업, 이 프론트 프로젝트 범위 밖)
+
 ## 다음 작업
 
-1. STEP 5 후속: 실제 백엔드(`http://YOUR_EC2_PUBLIC_IP:8080/api/auth/login`)로 로그인 테스트 — `ApiResponse<T>` 실제 형태, username이 이메일인지 확인
-2. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
+1. STEP 5 후속: Vite 프록시로 로그인 재시도 — `ApiResponse<T>` 실제 형태, username이 이메일인지 확인
+2. (별도, 백엔드 저장소) EC2 배포 백엔드의 CORS 허용 origin에 프론트 배포 주소 추가 필요
+3. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
 
 ## 결정 사항 히스토리
 
