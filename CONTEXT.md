@@ -77,7 +77,7 @@ src/
 
 | 화면 | 상태 |
 |---|---|
-| 로그인 | ⬜ placeholder만 |
+| 로그인 | 🟡 구현 완료, 실제 백엔드 연동 테스트 전 |
 | 대시보드 | ⬜ placeholder만 |
 | 출석 세션 관리 | ⬜ placeholder만 |
 | 출석 현황 | ⬜ placeholder만 |
@@ -97,10 +97,17 @@ src/
 - STEP 4 (2026-07-23, 완료): 공통 컴포넌트 8종(Button/Input/Select/Badge/Card/Modal/Table/Pagination) — Figma 디자인 컨텍스트(로그인/대시보드/출석현황목록/필터/학생계정생성) + 사용자 제공 PNG 14장 기반. 브랜치 `feat/step4-common-components`
   - Select는 Figma의 커스텀 드롭다운 대신 네이티브 `<select>` 사용(과설계 방지)
   - Modal은 Figma에 해당 화면이 없어 카드/버튼과 같은 톤으로 직접 구성
+- STEP 5 (2026-07-23, 완료): 로그인 화면 구현. 브랜치 `feat/step5-login-page`
+  - Button에 `brand`(파란색) variant 추가 — 로그인 히어로만 예외로 파란색 CTA 사용
+  - Input의 `label`을 `string`에서 `ReactNode`로 넓혀서 아이콘+텍스트 라벨 지원
+  - login({ username, password })에서 Figma의 "이메일" 입력값을 username으로 그대로 보냄 — 관리자 계정 username이 이메일 형태일 거라 가정, **실제 백엔드 연동 테스트 필요**
+  - "로그인 유지" 체크박스는 UI만 존재, localStorage/sessionStorage 분기 로직은 아직 없음(TODO)
+  - "비밀번호를 잊으셨나요?", "회원가입" 링크는 백엔드에 해당 API가 없어 비활성 처리
+  - Tailwind v4.1+에서 `bg-gradient-to-br`가 제거되고 `bg-linear-to-br`로 이름이 바뀐 걸 검색으로 확인하고 반영 (안 그러면 그라디언트가 안 나왔을 것)
 
 ## 다음 작업
 
-1. STEP 5: 로그인 화면 (인증/토큰 저장) — 이때 `ApiResponse<T>` 실제 형태 검증, Pretendard 폰트+블루 히어로 톤 적용
+1. STEP 5 후속: 실제 백엔드(`http://YOUR_EC2_PUBLIC_IP:8080/api/auth/login`)로 로그인 테스트 — `ApiResponse<T>` 실제 형태, username이 이메일인지 확인
 2. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
 
 ## 결정 사항 히스토리
