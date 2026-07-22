@@ -9,7 +9,7 @@
 - 목적: **백엔드(Spring) 취업 포트폴리오용 관리자 화면**. 프론트엔드 자체는 취업 목표 아님 → 과설계 금지, 실무에서 적당히 쓰는 수준으로 빠르게 구현
 - 다른 구성 요소: Android 앱(학생용, 별도 개발), Spring Boot 백엔드(`../attendance-project-context.md` 참고 — API 명세, 인증 방식 등)
 - 백엔드 baseURL: `http://YOUR_EC2_PUBLIC_IP:8080/api` (EC2 IP, 인스턴스 재시작 시 바뀔 수 있음)
-- 디자인: Figma 연동 (커넥터 인증 완료, 2026-07-23 기준)
+- 디자인: 로그인 화면은 Figma, 나머지 7개 화면은 Claude Design 목업(`Admin Web Page Mockups.html`)이 기준 (§디자인 토큰 참고)
 
 ## 진행 방식 (합의된 규칙)
 
@@ -37,26 +37,41 @@
 | 테스트 | Vitest (필요한 최소 수준만, 아직 미설치) | |
 | 린트 | ESLint + Prettier (아직 미설치) | |
 
-## 디자인 토큰 (Figma 확인, 2026-07-23)
+## 디자인 토큰 (2026-07-23, Claude Design 목업이 최종 기준)
 
-Figma 시안(로그인/대시보드/출석현황/필터/학생계정 등) 기준. Tailwind 기본 팔레트와 값이 그대로 일치해서 커스텀 theme 설정 없이 기본 클래스만 사용.
+**중요**: 최초엔 Figma 시안(로그인/대시보드/출석현황/필터/학생계정 등, 회색톤·gray-800 primary)을 기준으로 삼았었는데,
+이후 사용자가 준 Claude Design 목업(`Admin Web Page Mockups.html`, 인터랙티브 프로토타입 — 실제 상태값/색상 로직이 JS로 들어있음)이
+훨씬 상세하고 화면 7개(대시보드/세션관리/출석현황/사용자관리/NFC관리/통계/알림관리)를 전부 커버해서 **이걸 최종 기준으로 교체함**.
+Figma는 로그인 화면(파란 히어로+Pretendard 폰트)에만 여전히 유효.
 
-| 용도 | 값 | Tailwind |
-|---|---|---|
-| 기본 텍스트 | #1f2937 | gray-800 |
-| 보조 텍스트 | #6b7280 | gray-500 |
-| placeholder | #9ca3af | gray-400 |
-| input border | #d1d5db | gray-300 |
-| 구분선/카드 border | #e5e7eb | gray-200 |
-| 칩/배지 배경 | #f3f4f6 | gray-100 |
-| 카드 옅은 배경 | #f9fafb | gray-50 |
-| 버튼(primary) | #1f2937 | gray-800 (파란색 아님) |
-| radius | input/select 4px, 버튼/카드 6px, 페이지 컨테이너 12px, 칩/아바타 999px | |
-| 폰트 | 내부 화면은 Inter, **로그인 화면만 예외로 Pretendard** + 파란색(#2563eb) 그라디언트 히어로 | |
+| 용도 | 값 |
+|---|---|
+| 페이지 배경 | `#f5f6f8` |
+| 기본 텍스트 | `#1c1e21` |
+| 보조 텍스트 | `#8a8f98` |
+| 3차 텍스트(축 라벨 등) | `#9aa1ac` |
+| 테이블 본문 보조 텍스트 | `#6b7280` |
+| 카드/사이드바/헤더 border | `#e8e9ec` |
+| 버튼/인풋 border | `#dcdfe4` |
+| **Primary(브랜드 블루)** | `oklch(55% 0.16 258)` — 액티브 nav, primary 버튼, 차트 바 |
+| Primary 텍스트(연한 블루 배경 위) | `oklch(46% 0.16 258)` |
+| 연한 블루 배경(액티브 nav/배지) | `oklch(95% 0.03 258)` |
+| 카드 radius | 12px (`rounded-xl`) |
+| 배지 radius | 6px (`rounded-md`) |
+| 카드 그림자 | `0 1px 2px rgba(16,24,40,0.04)` |
+| 폰트 | 내부 화면은 시스템 sans, **로그인 화면만 예외로 Pretendard** + 파란색(#2563eb) 그라디언트 히어로 |
 
-- 로그인 화면은 마케팅 성격의 히어로 레이아웃이라 내부 앱(회색톤)과 톤이 다름 — STEP5에서 그대로 반영 예정
-- Figma에 "조퇴" 상태가 있는데 백엔드 AttendanceStatus(§8)에는 없음 — 출석현황 화면 만들 때 실제 API 값 확인 필요
-- Figma MCP Starter 플랜 호출 한도에 걸려서 이후 화면들은 사용자가 준 PNG 스크린샷 기반으로 작업함
+**배지 색상 매핑** (`src/utils/badgeColors.ts`, `Badge`의 `color` prop과 연결):
+- green(`oklch(95% 0.05 152)`/`oklch(42% 0.13 152)`) = 출석/진행중/활성/발송완료
+- amber(`oklch(95% 0.06 75)`/`oklch(50% 0.14 75)`) = 지각
+- red(`oklch(95% 0.045 20)`/`oklch(48% 0.18 20)`) = 결석/취소(세션)/실패
+- gray(`#f1f2f4`/`#6b7280`) = 대기/종료/비활성/취소(알림)
+- blue(`oklch(95% 0.03 258)`/`oklch(46% 0.16 258)`) = 예정/예약
+
+- 로그인 화면은 마케팅 성격의 히어로 레이아웃이라 내부 앱(회색+블루 톤)과 완전히 다름 — 의도된 예외, STEP5에 반영됨
+- **"조퇴" 상태는 최종적으로 존재하지 않는 것으로 확정**: Figma에만 있었고 이 목업(출석 상태는 PRESENT/LATE/ABSENT/WAITING만 있음)에도 백엔드 AttendanceStatus에도 없음 — `Badge`/`badgeColors.ts`에서 뺌
+- 이 목업엔 "설정" 화면이 없어서(nav 7개) 사이드바에 우리가 직접 8번째 항목으로 추가함 (백엔드 설정 API 자체가 아직 없어서 MSW로 채울 예정, STEP3에서 이미 mock 처리됨)
+- Figma MCP는 Starter 플랜 호출 한도에 걸려서 이후 화면들은 PNG 스크린샷 → Claude Design 목업 순서로 참고 자료가 바뀜
 
 ## 폴더 구조
 
@@ -78,7 +93,7 @@ src/
 | 화면 | 상태 |
 |---|---|
 | 로그인 | ✅ 완료 (실제 백엔드 연동 검증됨) |
-| 대시보드 | ⬜ placeholder만 |
+| 대시보드 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터) |
 | 출석 세션 관리 | ⬜ placeholder만 |
 | 출석 현황 | ⬜ placeholder만 |
 | 사용자 관리 | ⬜ placeholder만 |
@@ -115,9 +130,19 @@ src/
   - **username은 이메일이 아니라 그냥 문자열**("admin") — Figma의 "이메일" 라벨/placeholder는 실제와 다르지만 UI는 시안 그대로 둠 (기능엔 영향 없음, `type="text"`라 문제 없음)
   - 로그인 성공 시 `user` 정보도 `localStorage`에 같이 저장하도록 추가 (다음 화면에서 관리자 이름 표시 등에 사용)
 
+- STEP 6 (2026-07-23, 완료): 색상 시스템 교체(gray-800→oklch 블루) + 공통 레이아웃 + 대시보드 화면 구현. 브랜치 `feat/step6-layout-dashboard`
+  - `Badge`: `status`(도메인 결합, present/late/absent/earlyLeave/waiting/active/inactive/default) → `color`(순수 프레젠테이션, green/amber/red/gray/blue) prop으로 리팩터링. 도메인→색상 매핑은 `src/utils/badgeColors.ts`의 `attendanceStatusMeta`가 담당 (목업의 `badge(kind, key)` 패턴과 동일한 관심사 분리)
+  - `Button`: `primary` variant를 `#1f2937`(gray-800)에서 `oklch(55% 0.16 258)`(블루)로 교체. `brand`(로그인 전용 블루 CTA)는 유지
+  - `Card`: `className`으로 배경색을 덮어쓰는 방식은 Tailwind 유틸리티 생성 순서 때문에 불안정 — `tone`('elevated'|'subtle') prop으로 리팩터링
+  - `Table`: 제네릭 제약을 `T extends Record<string, unknown>`에서 `T extends object`로 완화 (인덱스 시그니처 없는 구체 interface와 함께 써도 컴파일 에러 안 나게)
+  - `Layout.tsx` 신규: 사이드바(8개 nav) + 헤더(제목/알림 아이콘/유저 아바타) 공통 셸. `react-router`의 `useMatches()` + 라우트 `handle: { title }`로 헤더 제목을 화면마다 자동 표시
+  - `router.tsx`: 최상위 placeholder 나열 방식에서 `Layout`을 부모로 둔 nested route로 재구성 (`/login`만 Layout 밖)
+  - `DashboardPage.tsx`: 통계 카드 4개, 시간대별 바 차트, 상태분포 도넛(conic-gradient), 진행중 세션 카드(pulse 애니메이션), 최근 출석 테이블 — 전부 Claude Design 목업의 시드 데이터 그대로 사용, 실 연동은 TODO
+  - `index.css`: 목업에만 있고 실제 CSS엔 없던 `@keyframes livePulse` 추가 (진행중 세션 점 애니메이션에 필요)
+
 ## 다음 작업
 
-1. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
+1. STEP 7~: 나머지 화면 구현 (세션관리/출석현황/사용자관리/NFC태그관리/통계/알림관리 + Add User·세션상세 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
 
 ## 결정 사항 히스토리
 
@@ -127,3 +152,7 @@ src/
 - 2026-07-23: react-router v7이 아니라 v8(현재 최신, `react-router` 패키지)로 확정 — 검색 결과 최신판이 이미 v8이었음
 - 2026-07-23: STEP3에서 api 함수를 8개 도메인 전부 한 번에 만들지 않고 auth만 먼저 만들기로 함(로그인에 필요) — 나머지는 화면 없는 상태에서 미리 만드는 게 선구현(과설계)이라 판단, 해당 화면 STEP에서 추가
 - 2026-07-23: MSW의 `public/mockServiceWorker.js`는 `npx msw init public/ --save` 명령으로 로컬에서 직접 생성해야 함 (버전별 정확한 스크립트라 손으로 안 만듦)
+- 2026-07-23: Claude Design 목업(`Admin Web Page Mockups.html`)이 Figma의 gray-800 색상 가정을 대체하는 최종 디자인 기준으로 확정 — 화면 7개를 전부 커버하고 실제 상태값/색상 로직까지 JS로 들어있어 Figma보다 구체적임 (§디자인 토큰 참고)
+- 2026-07-23: "조퇴"(EARLY_LEAVE) 상태는 최종적으로 존재하지 않는 것으로 확정 — Figma에만 있던 상태였고, 목업의 출석 상태(PRESENT/LATE/ABSENT/WAITING)와 실제 백엔드 enum 둘 다에 없음 확인
+- 2026-07-23: `Card`는 `className`으로 배경 오버라이드하는 방식 대신 `tone` prop 방식으로 확정 — Tailwind는 CSS 생성 순서가 HTML 클래스 순서와 무관하게 우선순위를 결정해서 className 문자열 이어붙이기로 배경색을 덮어쓰는 게 신뢰할 수 없음
+- 2026-07-23: `Badge`는 도메인 결합적인 `status` prop 대신 순수 프레젠테이션 `color` prop으로 확정, 도메인→색상 매핑은 화면/유틸 레벨(`badgeColors.ts`)에서 담당하기로 함 — 목업의 `badge(kind, key)` 헬퍼 패턴을 따름
