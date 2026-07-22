@@ -8,13 +8,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-// Figma 기준 색상: 버튼은 파란색이 아니라 진한 회색(gray-800) 사용
-// brand(파란색)는 로그인 화면 히어로 톤에 맞춘 예외 variant
+// 2026-07-23 정정: 초기 Figma 프레임만 보고 gray-800을 primary로 잡았었는데,
+// 이후 Claude Design 목업(Admin Web Page Mockups)이 훨씬 상세해서 그 기준(oklch 블루)으로 교체함
+// brand는 로그인 화면 히어로 톤 전용(Tailwind blue-600, 목업과 무관한 예외)
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-gray-800 text-white hover:bg-gray-700',
-  secondary: 'bg-white text-gray-800 border border-gray-800 hover:bg-gray-50',
+  primary: 'bg-[oklch(55%_0.16_258)] text-white hover:opacity-90',
+  secondary: 'bg-white text-[#4b5563] border border-[#dcdfe4] hover:bg-gray-50',
   ghost: 'text-gray-500 underline hover:text-gray-700',
-  chip: 'bg-gray-100 text-gray-800 border border-gray-200 rounded-full hover:bg-gray-200',
+  chip: 'bg-white text-[#8a8f98] border border-[#e8e9ec] rounded-full hover:bg-gray-50',
   brand: 'bg-blue-600 text-white hover:bg-blue-700',
 }
 
@@ -25,7 +26,10 @@ const Button = ({ variant = 'primary', active = false, className = '', children,
       : variant === 'chip'
         ? 'text-sm px-3 py-1.5 min-w-[40px]'
         : 'text-sm font-medium px-4 py-2 rounded-md min-w-[60px]'
-  const activeClass = variant === 'chip' && active ? 'bg-gray-800 text-white border-gray-800' : ''
+  const activeClass =
+    variant === 'chip' && active
+      ? 'bg-[oklch(95%_0.03_258)] text-[oklch(46%_0.16_258)] font-semibold border-transparent'
+      : ''
 
   return (
     <button className={`${base} ${activeClass || variantClasses[variant]} ${className}`} {...props}>

@@ -13,12 +13,7 @@ interface TableProps<T> {
   emptyMessage?: string
 }
 
-function Table<T extends Record<string, unknown>>({
-  columns,
-  data,
-  rowKey,
-  emptyMessage = '데이터가 없습니다.',
-}: TableProps<T>) {
+function Table<T extends object>({ columns, data, rowKey, emptyMessage = '데이터가 없습니다.' }: TableProps<T>) {
   return (
     <div className="w-full overflow-hidden rounded-md border border-gray-200">
       <table className="w-full text-left text-sm">
@@ -46,7 +41,7 @@ function Table<T extends Record<string, unknown>>({
               <tr key={rowKey(row)} className="border-b border-gray-200 last:border-b-0">
                 {columns.map((col) => (
                   <td key={col.key} className="px-3.5 py-2.5 text-gray-800">
-                    {col.render ? col.render(row) : String(row[col.key] ?? '')}
+                    {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}
                   </td>
                 ))}
               </tr>
