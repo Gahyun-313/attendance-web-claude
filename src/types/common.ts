@@ -1,6 +1,4 @@
-// 백엔드 공통 응답 래퍼 (Spring 쪽 global/response/ApiResponse.java 기준 추정)
-// TODO: STEP5(로그인 연동)에서 실제 응답을 받아보고 필드명이 다르면 이 타입만 고치면 됨
-// (api/ 함수들은 전부 이 타입을 거쳐서 data만 꺼내 쓰므로 파급 범위가 여기 한 곳으로 제한됨)
+// 백엔드 공통 응답 래퍼 (2026-07-23 실제 로그인 응답으로 검증 완료 - 더 이상 추정 아님)
 export interface ApiResponse<T> {
   success: boolean
   data: T
