@@ -37,6 +37,27 @@
 | 테스트 | Vitest (필요한 최소 수준만, 아직 미설치) | |
 | 린트 | ESLint + Prettier (아직 미설치) | |
 
+## 디자인 토큰 (Figma 확인, 2026-07-23)
+
+Figma 시안(로그인/대시보드/출석현황/필터/학생계정 등) 기준. Tailwind 기본 팔레트와 값이 그대로 일치해서 커스텀 theme 설정 없이 기본 클래스만 사용.
+
+| 용도 | 값 | Tailwind |
+|---|---|---|
+| 기본 텍스트 | #1f2937 | gray-800 |
+| 보조 텍스트 | #6b7280 | gray-500 |
+| placeholder | #9ca3af | gray-400 |
+| input border | #d1d5db | gray-300 |
+| 구분선/카드 border | #e5e7eb | gray-200 |
+| 칩/배지 배경 | #f3f4f6 | gray-100 |
+| 카드 옅은 배경 | #f9fafb | gray-50 |
+| 버튼(primary) | #1f2937 | gray-800 (파란색 아님) |
+| radius | input/select 4px, 버튼/카드 6px, 페이지 컨테이너 12px, 칩/아바타 999px | |
+| 폰트 | 내부 화면은 Inter, **로그인 화면만 예외로 Pretendard** + 파란색(#2563eb) 그라디언트 히어로 | |
+
+- 로그인 화면은 마케팅 성격의 히어로 레이아웃이라 내부 앱(회색톤)과 톤이 다름 — STEP5에서 그대로 반영 예정
+- Figma에 "조퇴" 상태가 있는데 백엔드 AttendanceStatus(§8)에는 없음 — 출석현황 화면 만들 때 실제 API 값 확인 필요
+- Figma MCP Starter 플랜 호출 한도에 걸려서 이후 화면들은 사용자가 준 PNG 스크린샷 기반으로 작업함
+
 ## 폴더 구조
 
 ```
@@ -73,12 +94,14 @@ src/
 - STEP 3 (2026-07-23, 완료): 공통 API 타입(`ApiResponse<T>` 등) + auth API(login/logout/refresh), MSW로 없는 API 4종 mock(사용자 대시보드, 설정 API). 브랜치 `feat/step3-api-layer-msw`
   - 다른 도메인(세션/출석/사용자/NFC태그/통계/알림) api 함수는 전부 구현하지 않고, 해당 화면 STEP에서 그때그때 추가하기로 함(선구현 방지)
   - `ApiResponse<T>` 필드명(`success/data/message`)은 백엔드 소스 확인 없이 일반적인 Spring 래퍼 형태로 가정 — STEP5 로그인 연동 때 실제 응답 보고 검증 필요
+- STEP 4 (2026-07-23, 완료): 공통 컴포넌트 8종(Button/Input/Select/Badge/Card/Modal/Table/Pagination) — Figma 디자인 컨텍스트(로그인/대시보드/출석현황목록/필터/학생계정생성) + 사용자 제공 PNG 14장 기반. 브랜치 `feat/step4-common-components`
+  - Select는 Figma의 커스텀 드롭다운 대신 네이티브 `<select>` 사용(과설계 방지)
+  - Modal은 Figma에 해당 화면이 없어 카드/버튼과 같은 톤으로 직접 구성
 
 ## 다음 작업
 
-1. STEP 4: 공통 컴포넌트 (Button/Input/Select/Badge/Card/Modal/Table/Pagination) — Figma 시안 기반
-2. STEP 5: 로그인 화면 (인증/토큰 저장) — 이때 `ApiResponse<T>` 실제 형태 검증
-3. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가)
+1. STEP 5: 로그인 화면 (인증/토큰 저장) — 이때 `ApiResponse<T>` 실제 형태 검증, Pretendard 폰트+블루 히어로 톤 적용
+2. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가) — 대시보드부터 진행 예정
 
 ## 결정 사항 히스토리
 
