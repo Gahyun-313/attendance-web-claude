@@ -69,14 +69,16 @@ src/
 ## 진행 상황
 
 - STEP 1 (2026-07-23, 완료): Vite+React+TS 프로젝트 셋업, axios 클라이언트(JWT 인터셉터 뼈대), React Query Provider, React Router 9개 화면 placeholder. 브랜치 `feature/day7-phase1-project-setup`
-- STEP 2 (진행 중): React19/react-router 8 등 버전 최신화, Tailwind CSS v4 설치
+- STEP 2 (2026-07-23, 완료): React19/react-router 8 등 버전 최신화, Tailwind CSS v4 설치. 브랜치 `feat/step2-tech-stack-tailwind`
+- STEP 3 (2026-07-23, 완료): 공통 API 타입(`ApiResponse<T>` 등) + auth API(login/logout/refresh), MSW로 없는 API 4종 mock(사용자 대시보드, 설정 API). 브랜치 `feat/step3-api-layer-msw`
+  - 다른 도메인(세션/출석/사용자/NFC태그/통계/알림) api 함수는 전부 구현하지 않고, 해당 화면 STEP에서 그때그때 추가하기로 함(선구현 방지)
+  - `ApiResponse<T>` 필드명(`success/data/message`)은 백엔드 소스 확인 없이 일반적인 Spring 래퍼 형태로 가정 — STEP5 로그인 연동 때 실제 응답 보고 검증 필요
 
 ## 다음 작업
 
-1. STEP 3: API 레이어 (types/ + api/ 함수) + 없는 API만 MSW
-2. STEP 4: 공통 컴포넌트 (Button/Input/Select/Badge/Card/Modal/Table/Pagination) — Figma 시안 기반
-3. STEP 5: 로그인 화면 (인증/토큰 저장)
-4. STEP 6~: 화면별 구현
+1. STEP 4: 공통 컴포넌트 (Button/Input/Select/Badge/Card/Modal/Table/Pagination) — Figma 시안 기반
+2. STEP 5: 로그인 화면 (인증/토큰 저장) — 이때 `ApiResponse<T>` 실제 형태 검증
+3. STEP 6~: 화면별 구현 (그때그때 필요한 api 함수 추가)
 
 ## 결정 사항 히스토리
 
@@ -84,3 +86,5 @@ src/
 - 2026-07-23: `LEARNING_GUIDE.md`/`ARCHITECTURE.md`는 만들지 않고 `CONTEXT.md`만 유지하기로 결정 (다른 채팅에서 이어가기 위한 최소한의 문서)
 - 2026-07-23: MSW는 전체 API가 아니라 백엔드에 아직 없는 API(설정 API, 사용자 대시보드 API)에 한해서만 사용
 - 2026-07-23: react-router v7이 아니라 v8(현재 최신, `react-router` 패키지)로 확정 — 검색 결과 최신판이 이미 v8이었음
+- 2026-07-23: STEP3에서 api 함수를 8개 도메인 전부 한 번에 만들지 않고 auth만 먼저 만들기로 함(로그인에 필요) — 나머지는 화면 없는 상태에서 미리 만드는 게 선구현(과설계)이라 판단, 해당 화면 STEP에서 추가
+- 2026-07-23: MSW의 `public/mockServiceWorker.js`는 `npx msw init public/ --save` 명령으로 로컬에서 직접 생성해야 함 (버전별 정확한 스크립트라 손으로 안 만듦)
