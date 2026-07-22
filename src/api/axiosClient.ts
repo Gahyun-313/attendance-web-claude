@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-// 백엔드 baseURL은 .env의 VITE_API_BASE_URL 참고 (EC2 IP, 재시작 시 바뀔 수 있음)
+// baseURL은 .env의 VITE_API_BASE_URL 참고. 개발 중엔 '/api'(상대경로)로 두고
+// vite.config.ts의 server.proxy가 실제 EC2 백엔드로 넘겨줌 (CORS 우회, VITE_API_PROXY_TARGET 참고)
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
