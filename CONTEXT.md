@@ -8,7 +8,7 @@
 - 이 프로젝트의 역할: **관리자용 웹** — Spring Boot 백엔드(완성+AWS 배포됨)를 사용하는 어드민 대시보드
 - 목적: **백엔드(Spring) 취업 포트폴리오용 관리자 화면**. 프론트엔드 자체는 취업 목표 아님 → 과설계 금지, 실무에서 적당히 쓰는 수준으로 빠르게 구현
 - 다른 구성 요소: Android 앱(학생용, 별도 개발), Spring Boot 백엔드(`../attendance-project-context.md` 참고 — API 명세, 인증 방식 등)
-- 백엔드 baseURL: `http://YOUR_EC2_PUBLIC_IP:8080/api` (EC2 IP, 인스턴스 재시작 시 바뀔 수 있음)
+- 백엔드 baseURL: `http://YOUR_EC2_PUBLIC_IP:8080/api` (EC2 IP, 인스턴스 재시작 시 바뀔 수 있음, 실제 값은 로컬 .env 참고)
 - 디자인: 로그인 화면은 Figma, 나머지 7개 화면은 Claude Design 목업(`Admin Web Page Mockups.html`)이 기준 (§디자인 토큰 참고)
 
 ## 진행 방식 (합의된 규칙)
@@ -121,7 +121,7 @@ src/
   - Tailwind v4.1+에서 `bg-gradient-to-br`가 제거되고 `bg-linear-to-br`로 이름이 바뀐 걸 검색으로 확인하고 반영 (안 그러면 그라디언트가 안 나왔을 것)
 
 - STEP 5 후속 (2026-07-23): 로그인 실제 테스트 중 CORS 에러 발생(EC2 백엔드가 localhost:5173을 허용 origin으로 안 열어준 상태로 추정, Postman은 브라우저가 아니라 CORS 검사 자체를 안 받아서 정상 응답했던 것) → **Vite dev 프록시로 임시 우회**
-  - `VITE_API_BASE_URL=/api`(상대경로, axios가 실제로 호출) + `VITE_API_PROXY_TARGET=http://YOUR_EC2_PUBLIC_IP:8080`(vite.config.ts server.proxy가 실제 전달할 주소)로 env 분리
+  - `VITE_API_BASE_URL=/api`(상대경로, axios가 실제로 호출) + `VITE_API_PROXY_TARGET=http://YOUR_EC2_PUBLIC_IP:8080`(vite.config.ts server.proxy가 실제 전달할 주소, 실제 값은 로컬 .env에만)로 env 분리
   - 이 우회는 `npm run dev` 개발 서버에서만 동작. 나중에 실제로 프론트를 배포하면 결국 **백엔드 CORS 허용 목록에 배포된 프론트 origin을 추가하거나 리버스 프록시로 묶어야 함** (백엔드 저장소의 `cors.allowed-origins`/`application-prod.yml` 쪽 작업, 이 프론트 프로젝트 범위 밖)
 
 - STEP 5 최종 확인 (2026-07-23): 백엔드에서 CORS 허용 origin에 5173 추가 완료, 로그인 실제 연동 성공
