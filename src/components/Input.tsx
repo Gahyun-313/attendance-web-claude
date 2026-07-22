@@ -1,7 +1,7 @@
-import type { InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, ReactNode } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string
+  label?: ReactNode
   /** true면 왼쪽에 돋보기 아이콘이 붙는 검색창 스타일 */
   search?: boolean
 }
@@ -9,7 +9,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 const Input = ({ label, search = false, className = '', ...props }: InputProps) => {
   return (
     <div className="flex w-full flex-col gap-1.5">
-      {label && <label className="text-[12.5px] font-semibold text-gray-800">{label}</label>}
+      {label && <label className="flex items-center gap-1.5 text-[12.5px] font-semibold text-gray-800">{label}</label>}
       <div className="relative">
         {search && (
           <svg

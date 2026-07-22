@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip' | 'brand'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -8,12 +8,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-// Figma 기준 색상: 버튼은 파란색이 아니라 진한 회색(gray-800) 사용 (로그인 화면만 예외로 파란색)
+// Figma 기준 색상: 버튼은 파란색이 아니라 진한 회색(gray-800) 사용
+// brand(파란색)는 로그인 화면 히어로 톤에 맞춘 예외 variant
 const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-gray-800 text-white hover:bg-gray-700',
   secondary: 'bg-white text-gray-800 border border-gray-800 hover:bg-gray-50',
   ghost: 'text-gray-500 underline hover:text-gray-700',
   chip: 'bg-gray-100 text-gray-800 border border-gray-200 rounded-full hover:bg-gray-200',
+  brand: 'bg-blue-600 text-white hover:bg-blue-700',
 }
 
 const Button = ({ variant = 'primary', active = false, className = '', children, ...props }: ButtonProps) => {
