@@ -97,7 +97,7 @@ src/
 | 출석 세션 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 클라이언트 필터/검색) |
 | 출석 현황 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 그룹/이름/상태 필터) |
 | 사용자 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 신규 사용자 추가 모달) |
-| NFC 태그 관리 | ⬜ placeholder만 |
+| NFC 태그 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 활성/비활성 토글) |
 | 통계 | ⬜ placeholder만 |
 | 알림 관리 | ⬜ placeholder만 |
 | 설정 | ⬜ placeholder만 (백엔드 API도 미구현) |
@@ -171,9 +171,15 @@ src/
   - `Select`: `value`로 완전히 controlled하게 쓸 때(그룹 선택 등) 빈 placeholder 옵션이 끼어들면서 `defaultValue`/`value` 동시 지정 경고가 나는 걸 발견 → `value` prop 존재 여부로 분기해서 controlled일 땐 placeholder 옵션 자체를 안 넣도록 수정
   - **알려진 차이점**: 목업의 "신규 사용자 추가" 모달은 폭 420px인데 공용 `Modal` 컴포넌트는 세션 상세 모달 기준 460px로 고정돼 있음 — 40px 차이는 사소하다고 판단해 별도 size prop 안 만들고 그냥 460px로 통일함
 
+- STEP 10 (2026-07-23, 완료): NFC 태그 관리 화면 구현. 브랜치 `feat/step10-nfc-tags-page`
+  - `NfcTagsPage.tsx`: 통계 카드 4개(정적 값) + 상태 필터(전체/활성/비활성) + 7열 테이블(태그명/UID/설치위치/연결된세션/마지막사용/상태/액션). "활성화"/"비활성화" 토글 버튼은 실제로 동작하게 만듦(클라이언트 상태만, TODO: 실제 `PATCH /api/nfc-tags/:id`), "수정"/"+ 신규 태그 등록"은 목업에 폼 시안 자체가 없어서 정적 버튼으로 남김
+  - `types/nfcTag.ts` 신규: `NfcTag`, `NfcTagStatus`(`ACTIVE`/`INACTIVE` 2종뿐, "분실" 등 없음) 타입
+  - `utils/badgeColors.ts`: `nfcTagStatusMeta` 추가
+  - UID 컬럼은 목업이 `font-family: monospace`를 썼길래 `font-mono` 클래스로 반영
+
 ## 다음 작업
 
-1. STEP 10~: 나머지 화면 구현 (NFC태그관리/통계/알림관리) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
+1. STEP 11~: 나머지 화면 구현 (통계/알림관리) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
 2. 로컬에 실제 git 저장소가 생겼으니, 이제 이 세션에서 매 STEP마다 `git bundle`을 새로 만들어 전달하는 대신 **브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋**하는 방식으로 전환 (샌드박스가 마운트된 D 드라이브에서 `git checkout -f` 등 델리트가 필요한 git 명령을 실행하면 FUSE 마운트 제약으로 계속 실패하는 걸 이번에 다시 확인함)
 
 ## 결정 사항 히스토리
