@@ -1,19 +1,14 @@
-import { useMemo, useState, type FormEvent } from 'react'
+// 알림 관리 화면. 2026-07-23(STEP19): 로컬 시드 데이터 대신 실제 백엔드 API 연동 (GET/POST /api/notifications,
+// DELETE로 예약 취소). 목업에 있던 "발송 방식"(푸시/이메일) 필드는 실제 백엔드에 없어서 제거함(사용자 확인 완료) -
+// 실제로는 FCM 토큰 존재 여부만 보고 즉시발송/예약 여부에 따라 SENT/FAILED/SCHEDULED가 결정됨
+import { useState, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { notificationStatusMeta } from '../utils/badgeColors'
 import { GROUPS } from '../utils/groups'
 import type { NotificationItem, NotificationStatus } from '../types/notification'
-
-// TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 알림 관리 화면 시드 데이터를 그대로 씀.
-// 실제 연동은 GET/POST /api/notifications 등 알림 API 붙일 때(다음 STEP) 교체
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  { id: 1, title: '7/23 백엔드 프로젝트 회의 출석 안내', target: '개발1팀', method: '푸시', when: '발송 2026-07-23 09:30', status: 'SENT' },
-  { id: 2, title: '지각 3회 이상 대상자 안내', target: '스터디 B조', method: '푸시', when: '예약 2026-07-24 09:00', status: 'SCHEDULED' },
-  { id: 3, title: '여름방학 스터디 일정 변경 공지', target: '전체', method: '푸시 + 이메일', when: '발송 2026-07-20 08:00', status: 'SENT' },
-  { id: 4, title: 'NFC 태그 점검 임시 안내', target: '스터디 C조', method: '푸시', when: '발송 2026-07-19 08:00', status: 'FAILED' },
-  { id: 5, title: '8월 정기 모임 안내', target: 'CS스터디팀', method: '푸시', when: '예약 2026-08-01 10:00', status: 'SCHEDULED' },
-]
+import { cancelNotification, createNotification, listNotifications } from '../api/notifications'
 
 // 목업엔 필터 탭이 전체/예약/발송완료/실패 4개뿐 (취소는 배지 색만 정의돼있고 탭은 없음) - 그대로 따름
 const FILTER_TABS: { value: NotificationStatus | 'ALL'; label: string }[] = [
@@ -24,37 +19,32 @@ const FILTER_TABS: { value: NotificationStatus | 'ALL'; label: string }[] = [
 ]
 
 const TARGET_OPTIONS = ['전체', ...GROUPS]
-const METHOD_OPTIONS = ['푸시', '푸시 + 이메일']
 
 interface NotificationFormState {
   title: string
+  content: string
   target: string
-  method: string
-  scheduleAt: string
+  scheduledAt: string
 }
 
-const emptyForm: NotificationFormState = { title: '', target: TARGET_OPTIONS[0], method: METHOD_OPTIONS[0], scheduleAt: '' }
-
-const formatNow = () => {
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-}
+const emptyForm: NotificationFormState = { title: '', content: '', target: TARGET_OPTIONS[0], scheduledAt: '' }
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS)
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<NotificationStatus | 'ALL'>('ALL')
   const [detailId, setDetailId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState<NotificationFormState>(emptyForm)
 
-  const filtered = useMemo(() => {
-    return notifications.filter((n) => filter === 'ALL' || n.status === filter)
-  }, [notifications, filter])
+  const notificationsQuery = useQuery({
+    queryKey: ['notifications', filter],
+    queryFn: () => listNotifications(filter === 'ALL' ? undefined : filter),
+  })
+  const notifications = notificationsQuery.data ?? []
 
-  const cancelScheduled = (id: number) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, status: 'CANCELED' } : n)))
-  }
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  const createMutation = useMutation({ mutationFn: createNotification, onSuccess: invalidate })
+  const cancelMutation = useMutation({ mutationFn: cancelNotification, onSuccess: invalidate })
 
   const detailNotification = notifications.find((n) => n.id === detailId) ?? null
 
@@ -65,18 +55,13 @@ const NotificationsPage = () => {
 
   const handleCreate = (e: FormEvent) => {
     e.preventDefault()
-    if (!form.title.trim()) return
-    // TODO: 실제로는 POST /api/notifications로 보내고 응답값으로 대체 (실제 발송/예약은 백엔드가 처리)
-    const scheduled = form.scheduleAt.trim() !== ''
-    const newNotification: NotificationItem = {
-      id: Date.now(),
+    if (!form.title.trim() || !form.content.trim()) return
+    createMutation.mutate({
       title: form.title.trim(),
-      target: form.target,
-      method: form.method,
-      when: scheduled ? `예약 ${form.scheduleAt.trim()}` : `발송 ${formatNow()}`,
-      status: scheduled ? 'SCHEDULED' : 'SENT',
-    }
-    setNotifications((prev) => [newNotification, ...prev])
+      content: form.content.trim(),
+      targetGroup: form.target === '전체' ? null : form.target,
+      scheduledAt: form.scheduledAt.trim() || null,
+    })
     closeCreate()
   }
 
@@ -84,9 +69,12 @@ const NotificationsPage = () => {
 
   const columns: TableColumn<NotificationItem>[] = [
     { key: 'title', header: '제목', render: (row) => <span className="font-semibold">{row.title}</span> },
-    { key: 'target', header: '대상 그룹', render: (row) => muted(row.target) },
-    { key: 'method', header: '발송 방식', render: (row) => muted(row.method) },
-    { key: 'when', header: '예약/발송 시각', render: (row) => muted(row.when) },
+    { key: 'target', header: '대상 그룹', render: (row) => muted(row.targetGroup ?? '전체') },
+    {
+      key: 'when',
+      header: '예약/발송 시각',
+      render: (row) => muted(row.sentAt ? `발송 ${row.sentAt}` : row.scheduledAt ? `예약 ${row.scheduledAt}` : '-'),
+    },
     {
       key: 'status',
       header: '상태',
@@ -100,7 +88,7 @@ const NotificationsPage = () => {
       header: '액션',
       render: (row) =>
         row.status === 'SCHEDULED' ? (
-          <Button variant="secondary" size="sm" onClick={() => cancelScheduled(row.id)}>
+          <Button variant="secondary" size="sm" onClick={() => cancelMutation.mutate(row.id)}>
             발송 취소
           </Button>
         ) : (
@@ -126,7 +114,12 @@ const NotificationsPage = () => {
       </div>
 
       {/* ===== UI: 알림 목록 표 (예약 상태면 "발송 취소", 그 외엔 "상세" 버튼) ===== */}
-      <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 알림이 없습니다." />
+      <Table
+        columns={columns}
+        data={notifications}
+        rowKey={(row) => row.id}
+        emptyMessage={notificationsQuery.isLoading ? '불러오는 중...' : '조건에 맞는 알림이 없습니다.'}
+      />
 
       {/* ===== UI: 상세 모달 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 ===== */}
       <Modal open={detailNotification !== null} onClose={() => setDetailId(null)} title={detailNotification?.title}>
@@ -137,13 +130,16 @@ const NotificationsPage = () => {
                 {notificationStatusMeta[detailNotification.status].label}
               </Badge>
             </div>
+            <p className="mb-[18px] text-[13px] leading-relaxed text-[#6b7280]">{detailNotification.content}</p>
             <div className="grid grid-cols-[100px_1fr] gap-y-2.5 text-[13px]">
               <span className="text-[#9aa1ac]">대상 그룹</span>
-              <span className="font-medium text-[#1c1e21]">{detailNotification.target}</span>
-              <span className="text-[#9aa1ac]">발송 방식</span>
-              <span className="font-medium text-[#1c1e21]">{detailNotification.method}</span>
-              <span className="text-[#9aa1ac]">예약/발송</span>
-              <span className="font-medium text-[#1c1e21]">{detailNotification.when}</span>
+              <span className="font-medium text-[#1c1e21]">{detailNotification.targetGroup ?? '전체'}</span>
+              <span className="text-[#9aa1ac]">예약 시각</span>
+              <span className="font-medium text-[#1c1e21]">{detailNotification.scheduledAt ?? '-'}</span>
+              <span className="text-[#9aa1ac]">발송 시각</span>
+              <span className="font-medium text-[#1c1e21]">{detailNotification.sentAt ?? '-'}</span>
+              <span className="text-[#9aa1ac]">발송 대상 수</span>
+              <span className="font-medium text-[#1c1e21]">{detailNotification.targetCount ?? '-'}</span>
             </div>
           </>
         )}
@@ -159,6 +155,17 @@ const NotificationsPage = () => {
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             required
           />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12.5px] font-semibold text-[#4b5563]">내용</label>
+            <textarea
+              rows={3}
+              placeholder="알림 내용을 입력하세요"
+              value={form.content}
+              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+              required
+              className="w-full resize-none rounded-lg border border-[#dcdfe4] bg-white px-3 py-2 font-sans text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)]"
+            />
+          </div>
           <Select label="대상 그룹" value={form.target} onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}>
             {TARGET_OPTIONS.map((t) => (
               <option key={t} value={t}>
@@ -166,27 +173,22 @@ const NotificationsPage = () => {
               </option>
             ))}
           </Select>
-          <Select label="발송 방식" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}>
-            {METHOD_OPTIONS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </Select>
           <div>
             <Input
               label="예약 시각 (선택)"
               placeholder="예: 2026-08-01 10:00"
-              value={form.scheduleAt}
-              onChange={(e) => setForm((f) => ({ ...f, scheduleAt: e.target.value }))}
+              value={form.scheduledAt}
+              onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value }))}
             />
-            <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">비워두면 즉시 발송으로 처리됩니다.</p>
+            <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">
+              비워두거나 과거 시각이면 즉시 발송, 미래 시각이면 예약 상태로 저장됩니다. (실제 예약 발송 스케줄러는 아직 없음 - §9)
+            </p>
           </div>
           <div className="mt-1 flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={closeCreate}>
               취소
             </Button>
-            <Button type="submit">{form.scheduleAt.trim() ? '예약' : '즉시 발송'}</Button>
+            <Button type="submit">{form.scheduledAt.trim() ? '예약' : '즉시 발송'}</Button>
           </div>
         </form>
       </Modal>

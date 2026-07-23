@@ -1,9 +1,12 @@
+// 통계 화면. 2026-07-23(STEP19): 상단 통계 카드 4개 + 그룹별 출석률은 실제 통계 API(GET /api/statistics/overall,
+// /dashboard)로 연동. "최근 완료 세션 평균"과 "출석률 상위/하위 사용자"는 이 두 엔드포인트만으론 채울 수 없는 데이터라
+// (사용자별 전수 조회 API가 없어 상위/하위를 뽑으려면 전체 사용자 통계를 다 불러와야 하는데, 그런 목록형 API가 없음)
+// 목업 시드 데이터를 그대로 남겨둠 - 실제로 필요해지면 백엔드에 전용 API 추가를 요청해야 함(TODO)
+import { useQuery } from '@tanstack/react-query'
 import { Card } from '../components'
+import { getDashboardStatistics, getOverallStatistics } from '../api/statistics'
 
-// TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 통계 화면 시드 데이터를 그대로 씀.
-// 실제 연동은 통계 API(GET /api/statistics/... 등) 붙일 때(다음 STEP) 교체.
-// 상위/하위 사용자 목록은 목업처럼 사용자 관리 화면의 usersRaw를 정렬해서 뽑는 방식이라
-// 여기서도 같은 시드(이름/그룹/누적출석률)를 별도로 갖고 있음 - 실 연동 때는 통계 API 응답으로 대체
+// TODO: 상위/하위 사용자 랭킹용 전용 API가 없어서 당분간 시드 데이터 유지 (§9엔 사용자 개별 조회만 있음)
 const USER_RATES = [
   { name: '이서준', group: '개발1팀', rate: 96 },
   { name: '박지훈', group: '개발1팀', rate: 91 },
@@ -15,15 +18,7 @@ const USER_RATES = [
   { name: '오하준', group: '개발1팀', rate: 85 },
 ]
 
-const GROUP_RATES = [
-  { name: '개발1팀', pct: 94 },
-  { name: '스터디 A조', pct: 91 },
-  { name: '스터디 B조', pct: 85 },
-  { name: '스터디 C조', pct: 78 },
-  { name: 'CS스터디팀', pct: 89 },
-]
-
-// 최근 완료 세션 6회 평균 출석률 - 목업도 배열 바인딩 없이 하드코딩된 정적 차트라 그대로 둠
+// TODO: "최근 완료 세션 N회 평균" 전용 API가 없어서 당분간 시드 데이터 유지
 const RECENT_SESSION_BARS = [
   { label: '1회', pct: 84, opacity: 0.8 },
   { label: '2회', pct: 88, opacity: 0.8 },
@@ -41,44 +36,56 @@ const topUsers = [...USER_RATES].sort((a, b) => b.rate - a.rate).slice(0, 3)
 const bottomUsers = [...USER_RATES].sort((a, b) => a.rate - b.rate).slice(0, 3)
 
 const StatisticsPage = () => {
+  const overallQuery = useQuery({ queryKey: ['statisticsOverall'], queryFn: getOverallStatistics })
+  const dashboardQuery = useQuery({ queryKey: ['statisticsDashboard'], queryFn: getDashboardStatistics })
+  const overall = overallQuery.data
+  const groupRates = dashboardQuery.data?.groupRates ?? []
+
   return (
     <>
-      {/* ===== UI: 통계 카드 4개 (마지막 "상태별 누적" 카드만 큰 숫자 대신 텍스트 한 줄) ===== */}
+      {/* ===== UI: 통계 카드 4개 - GET /api/statistics/overall 값 (로딩 전엔 '-') ===== */}
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <p className="text-xs font-medium text-[#8a8f98]">총 학생 수</p>
-          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">42명</p>
+          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">{overall ? `${overall.totalUsers}명` : '-'}</p>
         </Card>
         <Card>
           <p className="text-xs font-medium text-[#8a8f98]">총 세션 수</p>
-          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">128회</p>
+          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">{overall ? `${overall.totalSessions}회` : '-'}</p>
         </Card>
         <Card>
           <p className="text-xs font-medium text-[#8a8f98]">전체 출석률</p>
-          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">87.4%</p>
+          <p className="mt-1 text-[22px] font-bold text-[#1c1e21]">
+            {overall ? `${overall.overallAttendanceRate.toFixed(1)}%` : '-'}
+          </p>
         </Card>
         <Card>
           <p className="text-xs font-medium text-[#8a8f98]">상태별 누적</p>
-          <p className="mt-[6px] text-[12.5px] text-[#6b7280]">출석 892 · 지각 154 · 결석 98</p>
+          <p className="mt-[6px] text-[12.5px] text-[#6b7280]">
+            {overall
+              ? `출석 ${overall.presentCount} · 지각 ${overall.lateCount} · 결석 ${overall.absentCount}`
+              : '불러오는 중...'}
+          </p>
         </Card>
       </div>
 
-      {/* ===== UI: 그룹별 출석률(가로 바) + 최근 세션 평균(세로 바) ===== */}
+      {/* ===== UI: 그룹별 출석률(가로 바, 실제 API) + 최근 세션 평균(세로 바, 아직 시드 데이터) ===== */}
       <div className="grid grid-cols-2 gap-4">
         {/* ----- UI: 그룹별 출석률 - 80% 미만이면 바/글자색이 경고색(oklch 빨강)으로 바뀜 (isLow) ----- */}
         <Card>
           <p className="mb-4 text-sm font-bold text-[#1c1e21]">그룹별 출석률</p>
           <div className="flex flex-col gap-3">
-            {GROUP_RATES.map((g) => {
-              const low = isLow(g.pct)
+            {groupRates.length === 0 && <p className="text-xs text-[#9aa1ac]">불러오는 중...</p>}
+            {groupRates.map((g) => {
+              const low = isLow(g.attendanceRate)
               return (
-                <div key={g.name} className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 text-[12.5px] text-[#4b5563]">{g.name}</span>
+                <div key={g.groupName} className="flex items-center gap-3">
+                  <span className="w-24 shrink-0 text-[12.5px] text-[#4b5563]">{g.groupName}</span>
                   <div className="h-[9px] flex-1 overflow-hidden rounded-[5px] bg-[#eef0f3]">
                     <div
                       className="h-full rounded-[5px]"
                       style={{
-                        width: `${g.pct}%`,
+                        width: `${g.attendanceRate}%`,
                         backgroundColor: low ? 'oklch(58% 0.19 18)' : 'oklch(55% 0.16 258)',
                       }}
                     />
@@ -87,7 +94,7 @@ const StatisticsPage = () => {
                     className="w-[38px] text-right text-[12.5px] font-semibold"
                     style={{ color: low ? 'oklch(48% 0.18 20)' : '#1c1e21' }}
                   >
-                    {g.pct}%
+                    {Math.round(g.attendanceRate)}%
                   </span>
                 </div>
               )
@@ -95,7 +102,7 @@ const StatisticsPage = () => {
           </div>
         </Card>
 
-        {/* ----- UI: 최근 완료 세션 6회 평균 출석률 - CSS 세로 바 차트 (RECENT_SESSION_BARS가 정적 시드) ----- */}
+        {/* ----- UI: 최근 완료 세션 6회 평균 출석률 - CSS 세로 바 차트 (전용 API 없어서 여전히 시드 데이터) ----- */}
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">최근 완료 세션 평균 출석률</p>
           <p className="mb-4 text-xs text-[#8a8f98]">최근 6회차</p>
@@ -113,7 +120,7 @@ const StatisticsPage = () => {
         </Card>
       </div>
 
-      {/* ===== UI: 출석률 상위/하위 사용자 리스트 (표 아니고 그냥 줄 목록) ===== */}
+      {/* ===== UI: 출석률 상위/하위 사용자 리스트 (표 아니고 그냥 줄 목록, 전용 API 없어서 여전히 시드 데이터) ===== */}
       <div className="grid grid-cols-2 gap-4">
         {/* ----- UI: 상위 3명 ----- */}
         <Card>

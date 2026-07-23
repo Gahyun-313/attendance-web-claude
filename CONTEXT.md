@@ -227,12 +227,29 @@ src/
     - 대상: `main.tsx`, `api/auth.ts`, `mocks/browser.ts`, `components/index.ts`, `utils/badgeColors.ts`, `components/Button.tsx`, `components/Input.tsx`, `pages/LoginPage.tsx`, `pages/DashboardPage.tsx`, `pages/SessionsPage.tsx`(+필터 로직), `pages/AttendancePage.tsx`(+필터 로직), `pages/UsersPage.tsx`(+필터 로직)
     - 나머지 파일들(types/*, router.tsx, axiosClient.ts, mocks/handlers.ts, NfcTagsPage/NotificationsPage/StatisticsPage/SettingsPage 등)은 STEP7~17에서 이미 맥락 설명 주석이 충분히 있어서 중복 추가 안 함
 
+- STEP 19 (2026-07-23, 완료): 6개 도메인 화면(세션/출석/사용자/NFC/통계/알림) 전부 실제 백엔드 API 연동 (사용자 요청). 브랜치 `feat/step19-backend-integration`
+  - `attendance-project-context.md`(사용자 첨부) §9 API 명세 기준으로 진행. 정확한 응답 DTO 필드명(특히 세션의 nfcTag 참조 방식, 출석 기록의 사용자 이름/학번 키)은 문서에 없어서 각 `api/*.ts`의 매핑 함수 한 곳에서만 변환하도록 분리해둠 — 실제 응답과 다르면 그 함수만 고치면 됨
+  - **신규**: `api/sessions.ts`, `api/attendances.ts`, `api/users.ts`, `api/nfcTags.ts`, `api/statistics.ts`, `api/notifications.ts`, `types/statistics.ts`
+  - **사용자 확인 후 반영한 3가지 실제 스펙 불일치**:
+    1. NFC 태그 상태: 목업 기준 2종(ACTIVE/INACTIVE)에서 실제 백엔드 4종(ACTIVE/INACTIVE/LOST/DAMAGED)으로 확장 (`types/nfcTag.ts`, `badgeColors.ts`)
+    2. 알림의 "발송 방식"(푸시/이메일) 필드는 실제 백엔드에 없어서 제거 (`types/notification.ts`) — 이메일 발송 로직 자체가 없고 FCM 토큰 존재 여부만으로 SENT/FAILED 결정
+    3. 사용자 목록의 누적 출석률/지각·결석 횟수는 `User` 엔티티에 없어서, `UsersPage`가 사용자마다 `GET /api/statistics/users/{id}`를 병렬 호출(`useQueries`)해서 채움 — 사용자 수 많아지면 느려질 수 있음(N+1), 목록 전용 통계 API가 생기면 교체 권장
+  - **세션관리**: 생성/수정 폼을 실제 `SessionRequest` 필드(날짜/시작·종료 시간 분리, NFC 태그는 자유입력 대신 실제 태그 목록에서 select) 기준으로 재구성. "세션 시작/종료" 버튼이 실제 `POST /sessions/:id/start`/`/close` 호출. 세션 취소(`/cancel`)는 백엔드엔 있지만 화면 정의(§3)에 버튼이 없어서 아직 연결 안 함(TODO)
+  - **출석현황**: 목업은 세션 1개 기준 정적 화면이었는데 실제 API는 세션 단위 조회라 상단에 세션 select를 신규 추가(기본으로 진행중 세션 선택). 통계 카드는 `GET /attendances/sessions/:id/dashboard` 값 사용. 상태 수정 시 사유(modifyReason) 입력을 필수로 변경 — 백엔드가 "변경 시 사유 작성 필수"라고 명시(§3)
+  - **사용자관리**: 학번(studentId)이 곧 로그인 아이디(username)라 상세 모달에 학번 필드 추가. 수정 모달에서 활성/비활성 토글 제거 — `PUT /users/:id`가 활성 상태를 다루는지 불확실하고, 백엔드 문서상 비활성화는 `DELETE /users/:id`(soft delete) 전용이라 액션 버튼으로 분리(재활성화 API는 없어서 활성 상태에서만 버튼 노출)
+  - **NFC태그관리**: "연결된 세션" 컬럼 제거 — 엔티티에 해당 필드가 없음(세션 쪽이 태그를 참조하는 단방향 관계라 실제로 값을 못 채움). 활성화/비활성화 버튼은 `POST /activate`/`/deactivate` 호출(분실/파손 상태에서도 "활성화" 버튼으로 재활성 시도 가능하게 뒀는데, 서버가 실제로 허용하는지는 미확인)
+  - **통계**: 상단 카드 4개 + 그룹별 출석률은 `GET /statistics/overall`, `/dashboard` 연동. "최근 완료 세션 평균"과 "상위/하위 사용자" 랭킹은 대응하는 API가 없어서(전체 사용자 통계를 한 번에 주는 목록형 엔드포인트 없음) 계속 시드 데이터로 남김 — 필요해지면 백엔드에 전용 API 추가 요청 필요
+  - **알림관리**: 상태 필터 탭마다 서버에 `status` 쿼리로 실제 필터링 요청. 생성 폼에 "내용"(content) 필드 추가, "발송 방식" 필드 제거
+  - `npx tsc --noEmit` 클린 확인 (`noUnusedLocals`/`noUnusedParameters` 활성 상태라 미사용 import도 같이 걸러짐)
+
 ## 다음 작업
 
-1. 지금까지 구현한 6개 도메인 화면(세션/출석/사용자/NFC/통계/알림)은 전부 Claude Design 목업의 시드 데이터를 쓰고 있음 — 백엔드에 해당 API가 준비되는 대로 화면별로 순서 상관없이 실제 연동으로 교체
+1. STEP19에서 추정으로 채운 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 통계 API의 정확한 키)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
 2. 설정 화면은 백엔드 API 자체가 아직 없어서 계속 보류 (MSW로 GET/PUT organization, GET/PUT attendance-policy만 mock된 상태, STEP3)
-3. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀(전부 목업 데이터가 페이지네이션 없이 전체 렌더였음 - 실 데이터 붙으면 필요해질 수 있음)
-2. 로컬에 실제 git 저장소가 생겼으니, 이제 이 세션에서 매 STEP마다 `git bundle`을 새로 만들어 전달하는 대신 **브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋**하는 방식으로 전환 (샌드박스가 마운트된 D 드라이브에서 `git checkout -f` 등 델리트가 필요한 git 명령을 실행하면 FUSE 마운트 제약으로 계속 실패하는 걸 이번에 다시 확인함)
+3. `axiosClient.ts`의 401 응답 인터셉터가 여전히 TODO 상태(refreshToken으로 갱신 시도 로직 없음) — 이제 실제 API를 계속 호출하게 됐으니 Access Token 만료(1시간) 후 401이 실제로 발생할 수 있어 우선순위를 올릴 필요 있음
+4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 세션 목록의 "출석률" 컬럼은 대응하는 백엔드 API가 없어서 계속 시드 데이터 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청
+5. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
+6. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
 
 ## 결정 사항 히스토리
 

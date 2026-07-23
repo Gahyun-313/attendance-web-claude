@@ -27,10 +27,12 @@ export const sessionStatusMeta: Record<SessionStatus, { color: BadgeColor; label
 export const userStatusMeta = (active: boolean): { color: BadgeColor; label: string } =>
   active ? { color: 'green', label: '활성' } : { color: 'gray', label: '비활성' }
 
-// NFC 태그 상태: badge('nfc', status) 매핑 그대로 (ACTIVE/INACTIVE 2가지뿐 - "분실" 등은 이 목업엔 없음)
+// NFC 태그 상태: 목업엔 ACTIVE/INACTIVE 2가지뿐이었는데, 실제 백엔드 NfcTagStatus는 LOST/DAMAGED까지 4가지라 확장(STEP19)
 export const nfcTagStatusMeta: Record<NfcTagStatus, { color: BadgeColor; label: string }> = {
   ACTIVE: { color: 'green', label: '활성' },
   INACTIVE: { color: 'gray', label: '비활성' },
+  LOST: { color: 'amber', label: '분실' },
+  DAMAGED: { color: 'red', label: '파손' },
 }
 
 // 알림 상태: badge('notif', status) 매핑 그대로 - 세션 취소(빨강)와 다르게 알림 취소는 회색
