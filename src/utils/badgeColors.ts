@@ -18,3 +18,7 @@ export const sessionStatusMeta: Record<SessionStatus, { color: BadgeColor; label
   COMPLETED: { color: 'gray', label: '종료' },
   CANCELED: { color: 'red', label: '취소' },
 }
+
+// 사용자(학생 계정) 활성 여부: badge('user', String(active)) 매핑 그대로 - boolean이라 Record 대신 함수로
+export const userStatusMeta = (active: boolean): { color: BadgeColor; label: string } =>
+  active ? { color: 'green', label: '활성' } : { color: 'gray', label: '비활성' }
