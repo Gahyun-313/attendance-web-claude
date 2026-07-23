@@ -1,6 +1,7 @@
 import { Badge, Card, Table } from '../components'
 import { attendanceStatusMeta } from '../utils/badgeColors'
 import type { TableColumn } from '../components'
+import type { AttendanceStatus } from '../types/attendance'
 
 // TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 시드 데이터를 그대로 씀.
 // 실제 연동은 GET /api/statistics/dashboard, GET /api/attendances/... 붙일 때(다음 STEP) 교체
@@ -59,7 +60,7 @@ interface RecentCheck {
   name: string
   session: string
   time: string
-  status: keyof typeof attendanceStatusMeta
+  status: AttendanceStatus
 }
 
 const RECENT_CHECKS: RecentCheck[] = [
