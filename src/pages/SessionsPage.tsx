@@ -1,9 +1,236 @@
+import { useMemo, useState } from 'react'
+import { Badge, Button, Modal, Table } from '../components'
+import type { TableColumn } from '../components'
+import { sessionStatusMeta } from '../utils/badgeColors'
+import type { Session, SessionStatus } from '../types/session'
+
+// TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 세션관리 화면 시드 데이터를 그대로 씀.
+// 실제 연동은 GET /api/sessions 등 세션 API 붙일 때(다음 STEP) 교체
+const SESSIONS: Session[] = [
+  {
+    id: 1,
+    name: '자료구조 3주차 강의',
+    group: '스터디 A조',
+    date: '2026-07-21',
+    time: '14:00–16:00',
+    tag: 'NFC-201호',
+    rate: '92%',
+    status: 'COMPLETED',
+    desc: '자료구조 스터디 A조 정규 강의 3주차',
+    location: '공학관 201호',
+    lateThreshold: '시작 후 10분',
+    note: '-',
+  },
+  {
+    id: 2,
+    name: '알고리즘 스터디 8회차',
+    group: '스터디 B조',
+    date: '2026-07-22',
+    time: '19:00–21:00',
+    tag: 'NFC-401호',
+    rate: '88%',
+    status: 'COMPLETED',
+    desc: '알고리즘 스터디 B조 정기 모임 8회차',
+    location: '중앙도서관 401호',
+    lateThreshold: '시작 후 10분',
+    note: '-',
+  },
+  {
+    id: 3,
+    name: '백엔드 프로젝트 주간회의',
+    group: '개발1팀',
+    date: '2026-07-23',
+    time: '10:00–11:00',
+    tag: 'NFC-회의실2',
+    rate: '38%',
+    status: 'ACTIVE',
+    desc: '백엔드 프로젝트 개발1팀 주간 진행상황 공유',
+    location: '본사 3층 회의실2',
+    lateThreshold: '시작 후 5분',
+    note: '화상 참여자는 사전 안내',
+  },
+  {
+    id: 4,
+    name: '프론트엔드 스터디 5회차',
+    group: '스터디 C조',
+    date: '2026-07-23',
+    time: '20:00–22:00',
+    tag: 'NFC-402호',
+    rate: '-',
+    status: 'SCHEDULED',
+    desc: '프론트엔드 스터디 C조 5회차 모임',
+    location: '중앙도서관 402호',
+    lateThreshold: '시작 후 10분',
+    note: '-',
+  },
+  {
+    id: 5,
+    name: 'CS 스터디 정기모임',
+    group: 'CS스터디팀',
+    date: '2026-07-20',
+    time: '18:00–20:00',
+    tag: 'NFC-301호',
+    rate: '-',
+    status: 'CANCELED',
+    desc: 'CS 스터디팀 정기 모임',
+    location: '공학관 301호',
+    lateThreshold: '시작 후 10분',
+    note: '인원 부족으로 취소',
+  },
+  {
+    id: 6,
+    name: '자료구조 4주차 강의',
+    group: '스터디 A조',
+    date: '2026-07-24',
+    time: '14:00–16:00',
+    tag: 'NFC-201호',
+    rate: '-',
+    status: 'SCHEDULED',
+    desc: '자료구조 스터디 A조 정규 강의 4주차',
+    location: '공학관 201호',
+    lateThreshold: '시작 후 10분',
+    note: '-',
+  },
+]
+
+const STATUS_FILTERS: { value: SessionStatus | 'ALL'; label: string }[] = [
+  { value: 'ALL', label: '전체' },
+  { value: 'SCHEDULED', label: '예정' },
+  { value: 'ACTIVE', label: '진행중' },
+  { value: 'COMPLETED', label: '종료' },
+  { value: 'CANCELED', label: '취소' },
+]
+
+// 진행중이면 "세션 종료", 예정이면 "세션 시작" 버튼을 모달에 보여줌 - 종료/취소된 세션은 버튼 없음
+const primaryActionLabel = (status: SessionStatus): string | null => {
+  if (status === 'SCHEDULED') return '세션 시작'
+  if (status === 'ACTIVE') return '세션 종료'
+  return null
+}
+
 const SessionsPage = () => {
+  const [statusFilter, setStatusFilter] = useState<SessionStatus | 'ALL'>('ALL')
+  const [search, setSearch] = useState('')
+  const [detailId, setDetailId] = useState<number | null>(null)
+
+  const filtered = useMemo(() => {
+    return SESSIONS.filter((s) => {
+      const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter
+      const matchesSearch = s.name.includes(search.trim())
+      return matchesStatus && matchesSearch
+    })
+  }, [statusFilter, search])
+
+  const detailSession = SESSIONS.find((s) => s.id === detailId) ?? null
+
+  const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
+
+  const columns: TableColumn<Session>[] = [
+    { key: 'name', header: '세션명', render: (row) => <span className="font-semibold">{row.name}</span> },
+    { key: 'group', header: '그룹', render: (row) => muted(row.group) },
+    { key: 'date', header: '날짜', render: (row) => muted(row.date) },
+    { key: 'time', header: '시간', render: (row) => muted(row.time) },
+    { key: 'tag', header: 'NFC 태그', render: (row) => muted(row.tag) },
+    { key: 'rate', header: '출석률' },
+    {
+      key: 'status',
+      header: '상태',
+      render: (row) => {
+        const meta = sessionStatusMeta[row.status]
+        return <Badge color={meta.color}>{meta.label}</Badge>
+      },
+    },
+    {
+      key: 'actions',
+      header: '액션',
+      render: (row) => (
+        <div className="flex gap-1.5">
+          <Button variant="secondary" size="sm" onClick={() => setDetailId(row.id)}>
+            상세
+          </Button>
+          <Button variant="secondary" size="sm">
+            수정
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
-    <div>
-      <h1>출석 세션 관리</h1>
-      <p>TODO: 세션 생성/조회/수정/삭제 화면 구현 예정</p>
-    </div>
+    <>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2.5">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as SessionStatus | 'ALL')}
+            className="rounded-lg border border-[#dcdfe4] bg-white px-3 py-[7px] text-[13px] text-[#333]"
+          >
+            {STATUS_FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="세션명 검색"
+            className="w-[220px] rounded-lg border border-[#dcdfe4] bg-white px-3 py-[7px] text-[13px] text-[#333] placeholder:text-[#9aa1ac]"
+          />
+        </div>
+        <Button>+ 새 세션 생성</Button>
+      </div>
+
+      <div className="mt-4">
+        <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 세션이 없습니다." />
+      </div>
+
+      <Modal
+        open={detailSession !== null}
+        onClose={() => setDetailId(null)}
+        title={detailSession?.name}
+        footer={
+          detailSession && (
+            <>
+              <Button variant="secondary" onClick={() => setDetailId(null)}>
+                닫기
+              </Button>
+              <Button variant="secondary">수정</Button>
+              {primaryActionLabel(detailSession.status) && <Button>{primaryActionLabel(detailSession.status)}</Button>}
+            </>
+          )
+        }
+      >
+        {detailSession && (
+          <>
+            <div className="-mt-2 mb-4">
+              <Badge color={sessionStatusMeta[detailSession.status].color}>
+                {sessionStatusMeta[detailSession.status].label}
+              </Badge>
+            </div>
+            <p className="mb-[18px] text-[13px] leading-relaxed text-[#6b7280]">{detailSession.desc}</p>
+            <div className="grid grid-cols-[100px_1fr] gap-y-2.5 text-[13px]">
+              <span className="text-[#9aa1ac]">그룹</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.group}</span>
+              <span className="text-[#9aa1ac]">날짜</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.date}</span>
+              <span className="text-[#9aa1ac]">시간</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.time}</span>
+              <span className="text-[#9aa1ac]">장소</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.location}</span>
+              <span className="text-[#9aa1ac]">NFC 태그</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.tag}</span>
+              <span className="text-[#9aa1ac]">지각 인정</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.lateThreshold}</span>
+              <span className="text-[#9aa1ac]">출석률</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.rate}</span>
+              <span className="text-[#9aa1ac]">비고</span>
+              <span className="font-medium text-[#1c1e21]">{detailSession.note}</span>
+            </div>
+          </>
+        )}
+      </Modal>
+    </>
   )
 }
 
