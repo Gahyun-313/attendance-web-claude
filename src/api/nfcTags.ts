@@ -1,7 +1,8 @@
 // NFC 태그 API. attendance-project-context.md §9 "NFC 태그 API" 기준.
 import axiosClient from './axiosClient'
-import type { ApiResponse } from '../types/common'
+import type { ApiResponse, PageResponse } from '../types/common'
 import type { NfcTag, NfcTagRequest, NfcTagStatus, NfcTagUpdateRequest } from '../types/nfcTag'
+import { unwrapListPayload } from '../utils/pageResponse'
 
 // 백엔드 NfcTagResponse 추정 형태 (엔티티 §8 기준 - "연결된 세션" 필드는 엔티티에 없어서 항상 undefined로 옴)
 interface NfcTagResponseDto {
@@ -26,8 +27,12 @@ const mapNfcTag = (dto: NfcTagResponseDto): NfcTag => ({
 })
 
 export const listNfcTags = async (): Promise<NfcTag[]> => {
-  const { data } = await axiosClient.get<ApiResponse<NfcTagResponseDto[]>>('/nfc-tags')
-  return data.data.map(mapNfcTag)
+  // 2026-07-23 실제 응답 확인됨: content/pageable 등을 포함한 Spring Data Page 형태로 옴 (배열 아님)
+  const { data } = await axiosClient.get<ApiResponse<PageResponse<NfcTagResponseDto> | NfcTagResponseDto[]>>(
+    '/nfc-tags',
+    { params: { size: 1000 } },
+  )
+  return unwrapListPayload(data.data).map(mapNfcTag)
 }
 
 export const createNfcTag = async (req: NfcTagRequest): Promise<NfcTag> => {

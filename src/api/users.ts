@@ -5,6 +5,7 @@
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
 import type { CreateUserRequest, StudentAccount, UserUpdateRequest } from '../types/student'
+import { unwrapListPayload } from '../utils/pageResponse'
 
 interface UserResponseDto {
   id: number
@@ -33,9 +34,7 @@ export const listUsers = async (): Promise<StudentAccount[]> => {
   const { data } = await axiosClient.get<ApiResponse<PageResponse<UserResponseDto> | UserResponseDto[]>>('/users', {
     params: { size: 1000 },
   })
-  const payload = data.data
-  const list = Array.isArray(payload) ? payload : payload.content
-  return list.map(mapUser)
+  return unwrapListPayload(data.data).map(mapUser)
 }
 
 export const listUserGroups = async (): Promise<string[]> => {

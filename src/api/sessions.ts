@@ -2,8 +2,9 @@
 // 서버 응답(SessionResponse)의 정확한 JSON 필드명은 문서에 없어서, 여기 mapSession() 한 곳에서만
 // 서버 응답 -> 화면이 쓰는 Session 뷰 모델로 변환한다. 실제 응답을 보고 필드명이 다르면 이 함수만 고치면 됨
 import axiosClient from './axiosClient'
-import type { ApiResponse } from '../types/common'
+import type { ApiResponse, PageResponse } from '../types/common'
 import type { Session, SessionRequest, SessionStatus } from '../types/session'
+import { unwrapListPayload } from '../utils/pageResponse'
 
 // 백엔드 SessionResponse 추정 형태 (엔티티 §8 기준)
 interface SessionResponseDto {
@@ -39,8 +40,12 @@ const mapSession = (dto: SessionResponseDto): Session => ({
 })
 
 export const listSessions = async (): Promise<Session[]> => {
-  const { data } = await axiosClient.get<ApiResponse<SessionResponseDto[]>>('/sessions')
-  return data.data.map(mapSession)
+  // NFC 태그 목록에서 Spring Data Page 래퍼(content/pageable 등)로 오는 게 실제 확인돼서, 세션도 같은 방식일 수 있어 방어적으로 처리
+  const { data } = await axiosClient.get<ApiResponse<PageResponse<SessionResponseDto> | SessionResponseDto[]>>(
+    '/sessions',
+    { params: { size: 1000 } },
+  )
+  return unwrapListPayload(data.data).map(mapSession)
 }
 
 export const createSession = async (req: SessionRequest): Promise<Session> => {

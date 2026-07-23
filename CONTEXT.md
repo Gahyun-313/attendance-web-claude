@@ -242,6 +242,15 @@ src/
   - **알림관리**: 상태 필터 탭마다 서버에 `status` 쿼리로 실제 필터링 요청. 생성 폼에 "내용"(content) 필드 추가, "발송 방식" 필드 제거
   - `npx tsc --noEmit` 클린 확인 (`noUnusedLocals`/`noUnusedParameters` 활성 상태라 미사용 import도 같이 걸러짐)
 
+- STEP 19 후속 버그 수정 (2026-07-23, 완료): 사용자가 "출석 세션 관리/NFC 태그 관리가 연동 안 됐다"고 리포트 → 실제
+  `GET /api/nfc-tags` 응답을 받아보니 배열이 아니라 `content/pageable/totalElements` 등을 포함한 Spring Data Page
+  래퍼였음(§9 문서엔 사용자 목록만 페이징이라고 나와있었는데 실제론 다른 목록 API도 페이징돼있었던 것). `listNfcTags`가
+  `data.data.map(...)`을 직접 호출해서 조용히 실패(빈 배열)했던 게 원인. `UsersPage`만 정상 동작했던 이유는 애초에
+  `listUsers`에 배열/Page 방어 코드가 이미 있었기 때문. 브랜치 `fix/step19-page-wrapped-list-responses`
+  - `src/utils/pageResponse.ts` 신규: `unwrapListPayload()` 공용 헬퍼 - Page 래퍼든 순수 배열이든 항상 배열로 변환
+  - `api/nfcTags.ts`, `api/sessions.ts`, `api/attendances.ts`, `api/notifications.ts`가 전부 이 헬퍼를 쓰도록 수정 (세션/출석/알림은 아직 실제로 Page인지 미확인이지만, 확인된 NFC 태그와 같은 패턴일 가능성이 높아 선제적으로 방어)
+  - `api/users.ts`도 중복 로직 제거하고 같은 헬퍼로 통일
+
 ## 다음 작업
 
 1. STEP19에서 추정으로 채운 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 통계 API의 정확한 키)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
