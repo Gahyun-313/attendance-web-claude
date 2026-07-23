@@ -170,9 +170,10 @@ const DashboardPage = () => {
           </div>
         </Card>
 
-        <Card title="최근 출석 기록">
+        <div>
+          <p className="mb-3 text-sm font-bold text-[#1c1e21]">최근 출석 기록</p>
           <Table columns={recentChecksColumns} data={RECENT_CHECKS} rowKey={(row) => `${row.name}-${row.time}`} />
-        </Card>
+        </div>
       </div>
     </>
   )

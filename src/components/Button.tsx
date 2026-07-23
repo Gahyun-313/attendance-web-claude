@@ -1,9 +1,11 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip' | 'brand'
+type ButtonSize = 'md' | 'sm'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
+  size?: ButtonSize // sm = 테이블 행 안의 "상세"/"수정" 같은 인라인 액션 버튼용 (STEP7 세션관리 목업 기준)
   active?: boolean // chip 변형에서 선택된 상태 표시용
   children: ReactNode
 }
@@ -19,13 +21,15 @@ const variantClasses: Record<ButtonVariant, string> = {
   brand: 'bg-blue-600 text-white hover:bg-blue-700',
 }
 
-const Button = ({ variant = 'primary', active = false, className = '', children, ...props }: ButtonProps) => {
+const Button = ({ variant = 'primary', size = 'md', active = false, className = '', children, ...props }: ButtonProps) => {
   const base =
     variant === 'ghost'
       ? 'text-sm'
       : variant === 'chip'
         ? 'text-sm px-3 py-1.5 min-w-[40px]'
-        : 'text-sm font-medium px-4 py-2 rounded-md min-w-[60px]'
+        : size === 'sm'
+          ? 'text-[11.5px] font-medium px-[9px] py-1 rounded-md'
+          : 'text-sm font-medium px-4 py-2 rounded-md min-w-[60px]'
   const activeClass =
     variant === 'chip' && active
       ? 'bg-[oklch(95%_0.03_258)] text-[oklch(46%_0.16_258)] font-semibold border-transparent'
