@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
-import { Badge, Button, Card, Table } from '../components'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Badge, Button, Card, Input, Modal, Table } from '../components'
 import type { TableColumn } from '../components'
 import { nfcTagStatusMeta } from '../utils/badgeColors'
 import type { NfcTag, NfcTagStatus } from '../types/nfcTag'
 
 // TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 NFC 태그 관리 화면 시드 데이터를 그대로 씀.
-// 실제 연동은 GET/PATCH /api/nfc-tags 등 태그 API 붙일 때(다음 STEP) 교체
+// 실제 연동은 GET/POST/PATCH /api/nfc-tags 등 태그 API 붙일 때(다음 STEP) 교체
 const INITIAL_TAGS: NfcTag[] = [
   { id: 1, name: '강의실 201호', uid: '04:A3:B2:1C:7E:F1', location: '공학관 201호', session: '자료구조 3주차 강의', lastUsed: '2026-07-23 10:02', status: 'ACTIVE' },
   { id: 2, name: '스터디룸 401호', uid: '04:5F:9C:22:8A:B0', location: '중앙도서관 401호', session: '알고리즘 스터디 8회차', lastUsed: '2026-07-22 20:58', status: 'ACTIVE' },
@@ -21,9 +21,30 @@ const STATUS_FILTERS: { value: NfcTagStatus | 'ALL'; label: string }[] = [
   { value: 'INACTIVE', label: '비활성' },
 ]
 
+interface TagFormState {
+  name: string
+  uid: string
+  location: string
+  session: string
+}
+
+const emptyForm: TagFormState = { name: '', uid: '', location: '', session: '' }
+
+// 새 태그 등록할 때 UID를 직접 입력하기 번거로우니 임의로 하나 만들어서 채워줌(실제로는 하드웨어가 UID를 갖고 있음)
+const generateUid = () =>
+  Array.from({ length: 6 }, () =>
+    Math.floor(Math.random() * 256)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase(),
+  ).join(':')
+
 const NfcTagsPage = () => {
   const [tags, setTags] = useState<NfcTag[]>(INITIAL_TAGS)
   const [statusFilter, setStatusFilter] = useState<NfcTagStatus | 'ALL'>('ALL')
+  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState<TagFormState>(emptyForm)
 
   const filtered = useMemo(() => {
     return tags.filter((t) => statusFilter === 'ALL' || t.status === statusFilter)
@@ -41,6 +62,49 @@ const NfcTagsPage = () => {
     setTags((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : t)),
     )
+  }
+
+  const openCreate = () => {
+    setForm({ ...emptyForm, uid: generateUid() })
+    setEditingId(null)
+    setFormMode('create')
+  }
+
+  const openEdit = (tag: NfcTag) => {
+    setForm({ name: tag.name, uid: tag.uid, location: tag.location, session: tag.session ?? '' })
+    setEditingId(tag.id)
+    setFormMode('edit')
+  }
+
+  const closeForm = () => setFormMode(null)
+
+  const handleSubmitForm = (e: FormEvent) => {
+    e.preventDefault()
+    if (!form.name.trim() || !form.location.trim()) return
+
+    if (formMode === 'edit' && editingId !== null) {
+      // TODO: 실제로는 PATCH /api/nfc-tags/:id 로 보내고 응답값으로 대체
+      setTags((prev) =>
+        prev.map((t) =>
+          t.id === editingId
+            ? { ...t, name: form.name.trim(), location: form.location.trim(), session: form.session.trim() || null }
+            : t,
+        ),
+      )
+    } else {
+      // TODO: 실제로는 POST /api/nfc-tags 로 보내고 응답값(실제 UID 등)으로 대체
+      const newTag: NfcTag = {
+        id: Date.now(),
+        name: form.name.trim(),
+        uid: form.uid,
+        location: form.location.trim(),
+        session: form.session.trim() || null,
+        lastUsed: null,
+        status: 'ACTIVE',
+      }
+      setTags((prev) => [newTag, ...prev])
+    }
+    closeForm()
   }
 
   const muted = (value: string | null) => <span className="text-[#6b7280]">{value ?? '-'}</span>
@@ -68,8 +132,7 @@ const NfcTagsPage = () => {
       header: '액션',
       render: (row) => (
         <div className="flex gap-1.5">
-          {/* TODO: 태그 정보 수정은 아직 폼 시안이 없어서 UI만 (백엔드 API 붙을 때 같이 설계 필요) */}
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
             수정
           </Button>
           <Button variant="secondary" size="sm" onClick={() => toggleStatus(row.id)}>
@@ -103,11 +166,46 @@ const NfcTagsPage = () => {
             </option>
           ))}
         </select>
-        {/* TODO: 등록 폼 시안이 목업에 없어서(정적 버튼) 실제 등록 모달은 백엔드 API 설계 후 추가 */}
-        <Button>+ 신규 태그 등록</Button>
+        <Button onClick={openCreate}>+ 신규 태그 등록</Button>
       </div>
 
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 태그가 없습니다." />
+
+      {/* 등록/수정 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
+      <Modal open={formMode !== null} onClose={closeForm} title={formMode === 'edit' ? '태그 수정' : '신규 태그 등록'}>
+        <form onSubmit={handleSubmitForm} className="flex flex-col gap-3.5">
+          <Input
+            label="태그명"
+            placeholder="예: 강의실 303호"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            required
+          />
+          <div>
+            <Input label="UID" value={form.uid} readOnly disabled />
+            <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">UID는 하드웨어 태그 고유값이라 직접 수정할 수 없습니다.</p>
+          </div>
+          <Input
+            label="설치 위치"
+            placeholder="예: 공학관 303호"
+            value={form.location}
+            onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+            required
+          />
+          <Input
+            label="연결된 세션 (선택)"
+            placeholder="예: 자료구조 3주차 강의"
+            value={form.session}
+            onChange={(e) => setForm((f) => ({ ...f, session: e.target.value }))}
+          />
+          <div className="mt-1 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={closeForm}>
+              취소
+            </Button>
+            <Button type="submit">{formMode === 'edit' ? '저장' : '등록'}</Button>
+          </div>
+        </form>
+      </Modal>
     </>
   )
 }
