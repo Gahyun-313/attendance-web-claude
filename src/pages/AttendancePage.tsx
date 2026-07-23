@@ -118,23 +118,42 @@ const AttendancePage = () => {
 
   // width를 다 지정해서 fixedLayout으로 그림 - 안 그러면 필터링할 때마다 남아있는 행들 내용 길이에 따라
   // 브라우저가 컬럼 폭을 다시 계산해서(table-layout:auto 기본값) 셀 안쪽 여백이 필터마다 달라 보임
+  // 이름/학번/그룹/상태/출석시간/수정자는 전부 같은 폭(SAME_WIDTH), 비고/NFC위치는 한글 10자 기준 폭(약 130px)
+  const SAME_WIDTH = '96px'
+  const TEN_CHAR_WIDTH = '130px'
+  const truncated = (value: string) => (
+    <span className="block truncate text-[#6b7280]" title={value}>
+      {value}
+    </span>
+  )
+
   const columns: TableColumn<AttendanceRecord>[] = [
-    { key: 'name', header: '이름', width: '84px', render: (row) => <span className="font-semibold">{row.name}</span> },
-    { key: 'sid', header: '학번', width: '92px', render: (row) => muted(row.sid) },
-    { key: 'group', header: '그룹', width: '84px', render: (row) => muted(row.group) },
+    {
+      key: 'name',
+      header: '이름',
+      width: SAME_WIDTH,
+      render: (row) => <span className="font-semibold">{row.name}</span>,
+    },
+    { key: 'sid', header: '학번', width: SAME_WIDTH, render: (row) => muted(row.sid) },
+    { key: 'group', header: '그룹', width: SAME_WIDTH, render: (row) => muted(row.group) },
     {
       key: 'status',
       header: '상태',
-      width: '68px',
+      width: SAME_WIDTH,
       render: (row) => {
         const meta = attendanceStatusMeta[row.status]
         return <Badge color={meta.color}>{meta.label}</Badge>
       },
     },
-    { key: 'time', header: '출석 시간', width: '76px', render: (row) => muted(row.time) },
-    { key: 'location', header: 'NFC 위치', width: '100px', render: (row) => muted(row.location) },
-    { key: 'modifier', header: '수정자', width: '108px', render: (row) => muted(row.modifier) },
-    { key: 'note', header: '비고', render: (row) => muted(row.note) },
+    { key: 'time', header: '출석 시간', width: SAME_WIDTH, render: (row) => muted(row.time) },
+    { key: 'location', header: 'NFC 위치', width: TEN_CHAR_WIDTH, render: (row) => muted(row.location) },
+    { key: 'modifier', header: '수정자', width: SAME_WIDTH, render: (row) => muted(row.modifier) },
+    {
+      key: 'note',
+      header: '비고',
+      width: TEN_CHAR_WIDTH,
+      render: (row) => truncated(row.note),
+    },
     {
       key: 'actions',
       header: '액션',
