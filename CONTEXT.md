@@ -96,7 +96,7 @@ src/
 | 대시보드 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터) |
 | 출석 세션 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 클라이언트 필터/검색) |
 | 출석 현황 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 그룹/이름/상태 필터) |
-| 사용자 관리 | ⬜ placeholder만 |
+| 사용자 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 신규 사용자 추가 모달) |
 | NFC 태그 관리 | ⬜ placeholder만 |
 | 통계 | ⬜ placeholder만 |
 | 알림 관리 | ⬜ placeholder만 |
@@ -163,9 +163,17 @@ src/
   - STEP7에서 만든 `SessionsPage`/신규 `AttendancePage`의 테이블 바로 위에 불필요한 `mt-4`가 있던 걸 발견해서 제거 — `Layout`의 `<main>`이 이미 `gap-[22px]`로 자식 간 간격을 주고 있어서 중복 여백이었음
   - `DashboardPage.tsx`의 `RecentCheck.status` 타입도 `keyof typeof attendanceStatusMeta` 대신 새로 만든 `AttendanceStatus`를 import해서 쓰도록 정리
 
+- STEP 9 (2026-07-23, 완료): 사용자 관리 화면 + 신규 사용자 추가 모달 구현. 브랜치 `feat/step9-users-page`
+  - `UsersPage.tsx`: 통계 카드 4개(정적 값, 목업도 users 배열과 무관한 하드코딩) + 그룹/상태 필터 + 이름·학번 검색 + 8열 테이블 + "신규 사용자 추가" 모달. 목업과 다르게 **모달 제출을 실제로 동작하게 만듦**(클라이언트 상태에만 추가, 목업은 버튼에 핸들러가 없는 정적 목업이었음) — TODO로 실제 `POST /api/users` 연동 표시
+  - `types/student.ts` 신규: `StudentAccount` 타입 — 로그인한 관리자 본인 정보인 `types/user.ts`의 `User`와는 다른 도메인이라 분리(관리자가 "관리하는" 학생 계정 목록)
+  - `utils/badgeColors.ts`: `userStatusMeta` 추가 — active가 boolean이라 다른 상태들처럼 `Record`가 아니라 함수 형태(`userStatusMeta(active)`)로 다르게 만듦
+  - `Input`/`Select`: STEP4(Figma) 톤(`gray-300` border, `gray-800` 포커스 링)을 이번에 처음 폼에서 제대로 써보면서 목업 토큰(`#dcdfe4` border, `rounded-lg`, 블루 포커스 링)으로 교체 — Table/Modal/Button에 이어 공통 컴포넌트 색상 정정 마무리
+  - `Select`: `value`로 완전히 controlled하게 쓸 때(그룹 선택 등) 빈 placeholder 옵션이 끼어들면서 `defaultValue`/`value` 동시 지정 경고가 나는 걸 발견 → `value` prop 존재 여부로 분기해서 controlled일 땐 placeholder 옵션 자체를 안 넣도록 수정
+  - **알려진 차이점**: 목업의 "신규 사용자 추가" 모달은 폭 420px인데 공용 `Modal` 컴포넌트는 세션 상세 모달 기준 460px로 고정돼 있음 — 40px 차이는 사소하다고 판단해 별도 size prop 안 만들고 그냥 460px로 통일함
+
 ## 다음 작업
 
-1. STEP 9~: 나머지 화면 구현 (사용자관리/NFC태그관리/통계/알림관리 + Add User 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
+1. STEP 10~: 나머지 화면 구현 (NFC태그관리/통계/알림관리) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
 2. 로컬에 실제 git 저장소가 생겼으니, 이제 이 세션에서 매 STEP마다 `git bundle`을 새로 만들어 전달하는 대신 **브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋**하는 방식으로 전환 (샌드박스가 마운트된 D 드라이브에서 `git checkout -f` 등 델리트가 필요한 git 명령을 실행하면 FUSE 마운트 제약으로 계속 실패하는 걸 이번에 다시 확인함)
 
 ## 결정 사항 히스토리
