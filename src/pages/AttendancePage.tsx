@@ -116,25 +116,29 @@ const AttendancePage = () => {
 
   const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
 
+  // width를 다 지정해서 fixedLayout으로 그림 - 안 그러면 필터링할 때마다 남아있는 행들 내용 길이에 따라
+  // 브라우저가 컬럼 폭을 다시 계산해서(table-layout:auto 기본값) 셀 안쪽 여백이 필터마다 달라 보임
   const columns: TableColumn<AttendanceRecord>[] = [
-    { key: 'name', header: '이름', render: (row) => <span className="font-semibold">{row.name}</span> },
-    { key: 'sid', header: '학번', render: (row) => muted(row.sid) },
-    { key: 'group', header: '그룹', render: (row) => muted(row.group) },
+    { key: 'name', header: '이름', width: '84px', render: (row) => <span className="font-semibold">{row.name}</span> },
+    { key: 'sid', header: '학번', width: '92px', render: (row) => muted(row.sid) },
+    { key: 'group', header: '그룹', width: '84px', render: (row) => muted(row.group) },
     {
       key: 'status',
       header: '상태',
+      width: '68px',
       render: (row) => {
         const meta = attendanceStatusMeta[row.status]
         return <Badge color={meta.color}>{meta.label}</Badge>
       },
     },
-    { key: 'time', header: '출석 시간', render: (row) => muted(row.time) },
-    { key: 'location', header: 'NFC 위치', render: (row) => muted(row.location) },
-    { key: 'modifier', header: '수정자', render: (row) => muted(row.modifier) },
+    { key: 'time', header: '출석 시간', width: '76px', render: (row) => muted(row.time) },
+    { key: 'location', header: 'NFC 위치', width: '100px', render: (row) => muted(row.location) },
+    { key: 'modifier', header: '수정자', width: '108px', render: (row) => muted(row.modifier) },
     { key: 'note', header: '비고', render: (row) => muted(row.note) },
     {
       key: 'actions',
       header: '액션',
+      width: '96px',
       render: (row) => (
         <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
           상태 수정
@@ -201,7 +205,13 @@ const AttendancePage = () => {
         ))}
       </div>
 
-      <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 출석 기록이 없습니다." />
+      <Table
+        columns={columns}
+        data={filtered}
+        rowKey={(row) => row.id}
+        emptyMessage="조건에 맞는 출석 기록이 없습니다."
+        fixedLayout
+      />
 
       {/* 상태 수정 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
       <Modal open={editingRecord !== null} onClose={closeEdit} title={editingRecord ? `${editingRecord.name} 상태 수정` : ''}>
