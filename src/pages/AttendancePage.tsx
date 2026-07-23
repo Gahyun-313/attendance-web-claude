@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
-import { Badge, Button, Card, Table } from '../components'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Badge, Button, Card, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { attendanceStatusMeta } from '../utils/badgeColors'
 import type { AttendanceRecord, AttendanceStatus } from '../types/attendance'
+import type { User } from '../types/user'
 
 // TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 출석 현황 화면 시드 데이터를 그대로 씀.
-// 실제 연동은 GET /api/attendances 등 출석 API 붙일 때(다음 STEP) 교체.
+// 실제 연동은 GET/PATCH /api/attendances 등 출석 API 붙일 때(다음 STEP) 교체.
 // 목업이 세션 1개(백엔드 프로젝트 주간회의) 기준 데이터만 갖고 있어서 날짜/세션 select는 지금은
 // 옵션이 하나뿐인 정적 값 - 실제로는 세션 목록 API로 채워야 함
-const ATTENDANCE_RECORDS: AttendanceRecord[] = [
+const INITIAL_RECORDS: AttendanceRecord[] = [
   { id: 1, name: '이서준', sid: '20231234', group: '개발1팀', status: 'PRESENT', time: '10:02', location: 'NFC-회의실2', modifier: '-', note: '-' },
   { id: 2, name: '박지훈', sid: '20231235', group: '개발1팀', status: 'LATE', time: '10:12', location: 'NFC-회의실2', modifier: '-', note: '-' },
   { id: 3, name: '김민준', sid: '20231236', group: '개발1팀', status: 'PRESENT', time: '09:58', location: 'NFC-회의실2', modifier: '-', note: '-' },
@@ -35,26 +36,41 @@ interface StatCard {
   valueClassName?: string
 }
 
+// 상태 수정 시 "수정자" 칸에 남길 이름 - 로그인 응답으로 저장해둔 관리자 정보 재사용
+const currentAdminName = (): string => {
+  const raw = localStorage.getItem('user')
+  if (!raw) return '관리자'
+  try {
+    return `${(JSON.parse(raw) as User).name}(관리자)`
+  } catch {
+    return '관리자'
+  }
+}
+
 const AttendancePage = () => {
+  const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_RECORDS)
   const [group, setGroup] = useState(GROUP_OPTIONS[0])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<AttendanceStatus | 'ALL'>('ALL')
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editStatus, setEditStatus] = useState<AttendanceStatus>('PRESENT')
+  const [editNote, setEditNote] = useState('')
 
   const filtered = useMemo(() => {
-    return ATTENDANCE_RECORDS.filter((r) => {
+    return records.filter((r) => {
       const matchesGroup = group === '전체 그룹' || r.group === group
       const matchesSearch = r.name.includes(search.trim())
       const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter
       return matchesGroup && matchesSearch && matchesStatus
     })
-  }, [group, search, statusFilter])
+  }, [records, group, search, statusFilter])
 
   const counts = useMemo(() => {
-    const present = ATTENDANCE_RECORDS.filter((r) => r.status === 'PRESENT').length
-    const late = ATTENDANCE_RECORDS.filter((r) => r.status === 'LATE').length
-    const absent = ATTENDANCE_RECORDS.filter((r) => r.status === 'ABSENT').length
-    return { total: ATTENDANCE_RECORDS.length, present, late, absent }
-  }, [])
+    const present = records.filter((r) => r.status === 'PRESENT').length
+    const late = records.filter((r) => r.status === 'LATE').length
+    const absent = records.filter((r) => r.status === 'ABSENT').length
+    return { total: records.length, present, late, absent }
+  }, [records])
 
   // 목업 기준 출석률은 present/total의 단순 계산이 아니라 정적으로 박혀있던 값(50%)이라
   // 여기서는 소수점 없이 반올림한 present/total로 대체 (실 연동 때 백엔드 계산값으로 교체)
@@ -67,6 +83,36 @@ const AttendancePage = () => {
     { label: '결석', value: `${counts.absent}명`, valueClassName: 'text-[oklch(48%_0.18_20)]' },
     { label: '출석률', value: `${rate}%` },
   ]
+
+  const editingRecord = records.find((r) => r.id === editId) ?? null
+
+  const openEdit = (row: AttendanceRecord) => {
+    setEditId(row.id)
+    setEditStatus(row.status)
+    setEditNote(row.note === '-' ? '' : row.note)
+  }
+  const closeEdit = () => setEditId(null)
+
+  const handleSaveStatus = (e: FormEvent) => {
+    e.preventDefault()
+    if (editId === null) return
+    // TODO: 실제로는 PATCH /api/attendances/:id 로 보내고 응답값으로 대체
+    setRecords((prev) =>
+      prev.map((r) => {
+        if (r.id !== editId) return r
+        const now = new Date()
+        const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+        return {
+          ...r,
+          status: editStatus,
+          note: editNote.trim() === '' ? '-' : editNote.trim(),
+          modifier: currentAdminName(),
+          time: r.time === '-' && editStatus !== 'WAITING' ? nowTime : r.time,
+        }
+      }),
+    )
+    closeEdit()
+  }
 
   const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
 
@@ -89,9 +135,8 @@ const AttendancePage = () => {
     {
       key: 'actions',
       header: '액션',
-      // TODO: 상태 수동 수정은 백엔드 출석 상태 변경 API가 붙어야 동작 - 지금은 UI만
-      render: () => (
-        <Button variant="secondary" size="sm">
+      render: (row) => (
+        <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
           상태 수정
         </Button>
       ),
@@ -157,6 +202,37 @@ const AttendancePage = () => {
       </div>
 
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 출석 기록이 없습니다." />
+
+      {/* 상태 수정 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
+      <Modal open={editingRecord !== null} onClose={closeEdit} title={editingRecord ? `${editingRecord.name} 상태 수정` : ''}>
+        {editingRecord && (
+          <form onSubmit={handleSaveStatus} className="flex flex-col gap-3.5">
+            <Select label="상태" value={editStatus} onChange={(e) => setEditStatus(e.target.value as AttendanceStatus)}>
+              <option value="PRESENT">출석</option>
+              <option value="LATE">지각</option>
+              <option value="ABSENT">결석</option>
+              <option value="WAITING">대기</option>
+            </Select>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12.5px] font-semibold text-[#4b5563]">비고 (선택)</label>
+              <textarea
+                rows={2}
+                placeholder="사유를 입력하세요"
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                className="w-full resize-none rounded-lg border border-[#dcdfe4] bg-white px-3 py-2 font-sans text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)]"
+              />
+            </div>
+            <p className="text-[11.5px] text-[#9aa1ac]">저장하면 수정자란에 현재 로그인한 관리자 이름이 기록됩니다.</p>
+            <div className="mt-1 flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={closeEdit}>
+                취소
+              </Button>
+              <Button type="submit">저장</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </>
   )
 }
