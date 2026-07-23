@@ -142,6 +142,7 @@ const UsersPage = () => {
 
   return (
     <>
+      {/* ===== UI: 통계 카드 4개 (전체/활성 사용자, 평균 출석률, 이번 달 신규 - 전부 정적 값) ===== */}
       <div className="grid grid-cols-4 gap-4">
         {statCards.map((card) => (
           <Card key={card.label}>
@@ -151,6 +152,7 @@ const UsersPage = () => {
         ))}
       </div>
 
+      {/* ===== UI: 그룹/상태 필터 + 이름·학번 검색 + 신규 사용자 추가 버튼 ===== */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2.5">
           <select
@@ -185,8 +187,10 @@ const UsersPage = () => {
         <Button onClick={() => setShowAddUser(true)}>+ 신규 사용자 추가</Button>
       </div>
 
+      {/* ===== UI: 사용자 목록 표 ===== */}
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 사용자가 없습니다." />
 
+      {/* ===== UI: 신규 사용자 추가 모달 (Claude Design 목업에 실제 시안 있던 폼) ===== */}
       <Modal open={showAddUser} onClose={closeAddUser} title="신규 사용자 추가">
         <p className="-mt-2 mb-[18px] text-[12.5px] text-[#8a8f98]">
           관리자가 학생 계정을 생성합니다. 역할은 항상 STUDENT로 고정됩니다.
@@ -249,7 +253,7 @@ const UsersPage = () => {
         </form>
       </Modal>
 
-      {/* 사용자 상세 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 */}
+      {/* ===== UI: 사용자 상세 모달 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 ===== */}
       <Modal open={detailUser !== null} onClose={() => setDetailId(null)} title={detailUser?.name}>
         {detailUser && (
           <>
@@ -274,7 +278,7 @@ const UsersPage = () => {
         )}
       </Modal>
 
-      {/* 사용자 수정 - 목업엔 이 폼 시안이 없어서 Add User 모달 필드를 재사용해서 직접 구성 */}
+      {/* ===== UI: 사용자 수정 모달 - 목업엔 이 폼 시안이 없어서 Add User 모달 필드를 재사용해서 직접 구성 ===== */}
       <Modal open={editingUser !== null} onClose={closeEdit} title="사용자 수정">
         {editingUser && (
           <form onSubmit={handleSaveEdit} className="flex flex-col gap-3.5">

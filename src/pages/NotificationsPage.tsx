@@ -113,6 +113,7 @@ const NotificationsPage = () => {
 
   return (
     <>
+      {/* ===== UI: 상태 필터 탭(칩) + 새 알림 생성 버튼 ===== */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5">
           {FILTER_TABS.map((tab) => (
@@ -124,9 +125,10 @@ const NotificationsPage = () => {
         <Button onClick={() => setShowCreate(true)}>+ 새 알림 생성</Button>
       </div>
 
+      {/* ===== UI: 알림 목록 표 (예약 상태면 "발송 취소", 그 외엔 "상세" 버튼) ===== */}
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 알림이 없습니다." />
 
-      {/* 상세 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 */}
+      {/* ===== UI: 상세 모달 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 ===== */}
       <Modal open={detailNotification !== null} onClose={() => setDetailId(null)} title={detailNotification?.title}>
         {detailNotification && (
           <>
@@ -147,7 +149,7 @@ const NotificationsPage = () => {
         )}
       </Modal>
 
-      {/* 생성 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
+      {/* ===== UI: 생성 폼 모달 - 목업엔 이 폼 시안이 없어서 직접 구성 (예약시각 비우면 즉시발송) ===== */}
       <Modal open={showCreate} onClose={closeCreate} title="새 알림 생성">
         <form onSubmit={handleCreate} className="flex flex-col gap-3.5">
           <Input

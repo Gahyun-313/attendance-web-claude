@@ -51,7 +51,7 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen w-full">
-      {/* 왼쪽 히어로 - 마케팅 톤이라 내부 화면(gray-800)과 다르게 파란색 사용 */}
+      {/* ===== UI: 왼쪽 히어로 - 마케팅 톤이라 내부 화면(gray-800)과 다르게 파란색 사용, lg 미만에선 hidden ===== */}
       <div className="relative hidden w-1/2 flex-col justify-center overflow-hidden bg-linear-to-br from-blue-500 to-blue-700 px-16 py-12 text-white lg:flex">
         <div className="mb-10 flex items-center gap-2">
           <div className="flex size-9 items-center justify-center rounded-lg bg-white/15 text-lg">)~</div>
@@ -70,12 +70,13 @@ const LoginPage = () => {
         {/* TODO: Figma 원본의 폰/태그 일러스트 이미지 asset은 넣지 않음 - 필요하면 직접 추가 */}
       </div>
 
-      {/* 오른쪽 로그인 폼 */}
+      {/* ===== UI: 오른쪽 로그인 폼 ===== */}
       <div className="flex w-full flex-1 items-center justify-center bg-white px-6 lg:w-1/2">
         <form onSubmit={handleSubmit} className="w-full max-w-md">
           <h2 className="mb-1 text-2xl font-bold text-gray-800">관리자 로그인</h2>
           <p className="mb-8 text-sm text-gray-500">출석하자 관리자 계정으로 로그인하세요.</p>
 
+          {/* ===== UI: 아이디/비밀번호 입력칸 ===== */}
           <div className="mb-4">
             <Input
               label={
@@ -105,6 +106,7 @@ const LoginPage = () => {
             />
           </div>
 
+          {/* ===== UI: 로그인 유지 체크박스 + 비밀번호 찾기 링크(비활성) ===== */}
           <div className="mb-6 flex items-center justify-between text-sm">
             <label className="flex items-center gap-2 text-gray-700">
               <input
@@ -121,12 +123,15 @@ const LoginPage = () => {
             </span>
           </div>
 
+          {/* ===== UI: 로그인 실패 에러 메시지 (있을 때만 표시) ===== */}
           {errorMessage && <p className="mb-4 text-sm text-red-600">{errorMessage}</p>}
 
+          {/* ===== UI: 로그인 버튼 - variant="brand"는 로그인 화면 전용 파란색(다른 화면 primary와 다름) ===== */}
           <Button type="submit" variant="brand" className="w-full" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? '로그인 중...' : '로그인'}
           </Button>
 
+          {/* ===== UI: 회원가입 링크(비활성) ===== */}
           <p className="mt-6 text-center text-sm text-gray-500">
             계정이 없으신가요?{' '}
             {/* TODO: 관리자 회원가입 API가 아직 없음 (§9 - oauth/login만 "추후") - 연결 안 함 */}

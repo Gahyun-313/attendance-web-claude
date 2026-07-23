@@ -168,7 +168,9 @@ const AttendancePage = () => {
 
   return (
     <>
+      {/* ===== UI: 상단 필터바 (날짜/세션은 옵션 1개뿐이라 비활성 표시, 그룹/검색은 실제 동작, 상태 칩은 오른쪽 정렬) ===== */}
       <div className="flex flex-wrap items-center gap-2.5">
+        {/* ----- UI: 날짜 select - 세션이 여러 개 생기기 전까지는 옵션이 하나뿐이라 비활성 ----- */}
         <select
           disabled
           value="2026-07-23"
@@ -176,6 +178,7 @@ const AttendancePage = () => {
         >
           <option value="2026-07-23">2026-07-23</option>
         </select>
+        {/* ----- UI: 세션 select - 위와 동일한 이유로 비활성 ----- */}
         <select
           disabled
           value="백엔드 프로젝트 주간회의"
@@ -183,6 +186,7 @@ const AttendancePage = () => {
         >
           <option value="백엔드 프로젝트 주간회의">백엔드 프로젝트 주간회의</option>
         </select>
+        {/* ----- UI: 그룹 select (실제 필터링됨) ----- */}
         <select
           value={group}
           onChange={(e) => setGroup(e.target.value)}
@@ -194,6 +198,7 @@ const AttendancePage = () => {
             </option>
           ))}
         </select>
+        {/* ----- UI: 이름 검색 입력칸 ----- */}
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -201,6 +206,7 @@ const AttendancePage = () => {
           className="w-[180px] rounded-lg border border-[#dcdfe4] bg-white px-3 py-[7px] text-[13px] text-[#333] placeholder:text-[#9aa1ac]"
         />
 
+        {/* ----- UI: 상태 필터 칩(전체/출석/지각/결석/대기) - 오른쪽 끝으로 밀어냄(ml-auto) ----- */}
         <div className="ml-auto flex gap-1.5">
           {STATUS_CHIPS.map((chip) => (
             <Button
@@ -215,6 +221,7 @@ const AttendancePage = () => {
         </div>
       </div>
 
+      {/* ===== UI: 통계 카드 5개 (대상자수/출석/지각/결석/출석률) ===== */}
       <div className="grid grid-cols-5 gap-3.5">
         {statCards.map((card) => (
           <Card key={card.label}>
@@ -224,6 +231,7 @@ const AttendancePage = () => {
         ))}
       </div>
 
+      {/* ===== UI: 출석 기록 표 (fixedLayout - 필터 바꿔도 컬럼 폭 안 흔들리게, 위쪽 columns에서 각 컬럼 width 지정) ===== */}
       <Table
         columns={columns}
         data={filtered}
@@ -232,7 +240,7 @@ const AttendancePage = () => {
         fixedLayout
       />
 
-      {/* 상태 수정 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
+      {/* ===== UI: 상태 수정 모달 - 목업엔 이 폼 시안이 없어서 직접 구성 ===== */}
       <Modal open={editingRecord !== null} onClose={closeEdit} title={editingRecord ? `${editingRecord.name} 상태 수정` : ''}>
         {editingRecord && (
           <form onSubmit={handleSaveStatus} className="flex flex-col gap-3.5">

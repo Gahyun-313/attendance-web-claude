@@ -15,6 +15,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 const Select = ({ label, placeholder = 'Select...', className = '', children, value, ...props }: SelectProps) => {
   const isControlled = value !== undefined
 
+  // ===== UI: 라벨 + select 박스 (테두리/radius/포커스 색은 input과 통일돼있음) =====
   return (
     <div className="flex w-full flex-col gap-1.5">
       {label && <label className="text-[12.5px] font-semibold text-[#4b5563]">{label}</label>}

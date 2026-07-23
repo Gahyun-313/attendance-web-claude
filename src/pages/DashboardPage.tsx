@@ -98,7 +98,7 @@ const donutStops = (() => {
 const DashboardPage = () => {
   return (
     <>
-      {/* 통계 카드 4개 */}
+      {/* ===== UI: 통계 카드 4개 (오늘 세션 수/진행중/출석률/활성 사용자) ===== */}
       <div className="grid grid-cols-4 gap-4">
         {STAT_CARDS.map((card) => (
           <Card key={card.label}>
@@ -108,8 +108,9 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      {/* 시간대별 추이 + 상태 분포 */}
+      {/* ===== UI: 시간대별 바 차트 + 상태 분포 도넛 차트 ===== */}
       <div className="grid grid-cols-[1.5fr_1fr] gap-4">
+        {/* ----- UI: 시간대별 출석 체크 추이 (09~21시 CSS 바 차트, 높이는 HOURLY_BARS.pct%) ----- */}
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">시간대별 출석 체크 추이</p>
           <p className="mb-4 text-xs text-[#9aa1ac]">오늘, 09시~21시</p>
@@ -129,6 +130,7 @@ const DashboardPage = () => {
           </div>
         </Card>
 
+        {/* ----- UI: 출석 상태 분포 도넛 (conic-gradient로 그림, donutStops가 각 구간 각도를 계산) ----- */}
         <Card>
           <p className="mb-4 text-sm font-bold text-[#1c1e21]">오늘 출석 상태 분포</p>
           <div className="flex items-center justify-center">
@@ -141,6 +143,7 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
+          {/* ----- UI: 도넛 아래 범례(출석/지각/결석 %) ----- */}
           <div className="mt-4 flex justify-center gap-4">
             {STATUS_DISTRIBUTION.map((s) => (
               <div key={s.label} className="flex items-center gap-1.5 text-xs text-[#6b7280]">
@@ -152,8 +155,9 @@ const DashboardPage = () => {
         </Card>
       </div>
 
-      {/* 진행 중인 세션 + 최근 출석 기록 */}
+      {/* ===== UI: 진행 중인 세션 카드 + 최근 출석 기록 표 ===== */}
       <div className="grid grid-cols-[1fr_1.3fr] gap-4">
+        {/* ----- UI: 진행 중인 세션 - 초록 점은 index.css의 @keyframes livePulse로 깜빡임 ----- */}
         <Card title="진행 중인 세션">
           <div className="rounded-[10px] border border-[#eceef1] p-4">
             <div className="flex items-start justify-between gap-3">
@@ -171,6 +175,7 @@ const DashboardPage = () => {
           </div>
         </Card>
 
+        {/* ----- UI: 최근 출석 기록 - Table 컴포넌트가 카드 프레임을 겸해서 별도 Card로 안 감쌈 ----- */}
         <div>
           <p className="mb-3 text-sm font-bold text-[#1c1e21]">최근 출석 기록</p>
           <Table columns={recentChecksColumns} data={RECENT_CHECKS} rowKey={(row) => `${row.name}-${row.time}`} />

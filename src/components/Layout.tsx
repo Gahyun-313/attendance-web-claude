@@ -30,12 +30,14 @@ const Layout = () => {
 
   return (
     <div className="flex min-h-screen w-full bg-[#f5f6f8] text-[#1c1e21]">
+      {/* ===== UI: 왼쪽 사이드바 (로고 + nav + 하단 버전 텍스트) ===== */}
       <aside className="flex w-56 shrink-0 flex-col border-r border-[#e8e9ec] bg-white p-3.5">
         <div className="px-2.5 pb-6 pt-0.5">
           <div className="text-base font-bold tracking-tight text-[#1c1e21]">출석하자</div>
           <div className="mt-0.5 text-[11.5px] font-medium text-[#9aa1ac]">Admin Console</div>
         </div>
 
+        {/* ===== UI: nav 메뉴 목록 - 화면 추가/이름 바꾸려면 위쪽 NAV_ITEMS 배열만 고치면 됨 ===== */}
         <nav className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -59,10 +61,12 @@ const Layout = () => {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* ===== UI: 상단 헤더 (왼쪽: 화면 제목, 오른쪽: 알림 아이콘 + 로그인한 관리자 정보) ===== */}
         <header className="flex h-[58px] shrink-0 items-center justify-between border-b border-[#e8e9ec] bg-white px-7">
           <div className="text-base font-bold text-[#1c1e21]">{title}</div>
 
           <div className="flex items-center gap-[18px]">
+            {/* ===== UI: 알림 종 아이콘 - 오른쪽 위 빨간 점은 항상 표시(안 읽은 알림 개수 연동 전) ===== */}
             <div className="relative size-5 text-[#8a8f98]">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -71,6 +75,7 @@ const Layout = () => {
               <div className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-[oklch(58%_0.19_20)]" />
             </div>
 
+            {/* ===== UI: 관리자 아바타(이름 첫 글자) + 이름/역할 ===== */}
             <div className="flex items-center gap-2.5">
               <div className="flex size-8 items-center justify-center rounded-full bg-[oklch(95%_0.03_258)] text-[12.5px] font-bold text-[oklch(46%_0.16_258)]">
                 {user?.name?.[0] ?? 'A'}
@@ -83,6 +88,8 @@ const Layout = () => {
           </div>
         </header>
 
+        {/* ===== UI: 본문 영역 - 여기 Outlet 자리에 각 화면(DashboardPage 등)이 렌더링됨 ===== */}
+        {/* gap-[22px]가 각 화면 안의 섹션(필터바/카드/표 등) 사이 세로 간격을 자동으로 줌 */}
         <main className="flex flex-1 flex-col gap-[22px] overflow-y-auto px-[30px] py-[26px]">
           <Outlet />
         </main>

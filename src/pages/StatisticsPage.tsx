@@ -43,6 +43,7 @@ const bottomUsers = [...USER_RATES].sort((a, b) => a.rate - b.rate).slice(0, 3)
 const StatisticsPage = () => {
   return (
     <>
+      {/* ===== UI: 통계 카드 4개 (마지막 "상태별 누적" 카드만 큰 숫자 대신 텍스트 한 줄) ===== */}
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <p className="text-xs font-medium text-[#8a8f98]">총 학생 수</p>
@@ -62,7 +63,9 @@ const StatisticsPage = () => {
         </Card>
       </div>
 
+      {/* ===== UI: 그룹별 출석률(가로 바) + 최근 세션 평균(세로 바) ===== */}
       <div className="grid grid-cols-2 gap-4">
+        {/* ----- UI: 그룹별 출석률 - 80% 미만이면 바/글자색이 경고색(oklch 빨강)으로 바뀜 (isLow) ----- */}
         <Card>
           <p className="mb-4 text-sm font-bold text-[#1c1e21]">그룹별 출석률</p>
           <div className="flex flex-col gap-3">
@@ -92,6 +95,7 @@ const StatisticsPage = () => {
           </div>
         </Card>
 
+        {/* ----- UI: 최근 완료 세션 6회 평균 출석률 - CSS 세로 바 차트 (RECENT_SESSION_BARS가 정적 시드) ----- */}
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">최근 완료 세션 평균 출석률</p>
           <p className="mb-4 text-xs text-[#8a8f98]">최근 6회차</p>
@@ -109,7 +113,9 @@ const StatisticsPage = () => {
         </Card>
       </div>
 
+      {/* ===== UI: 출석률 상위/하위 사용자 리스트 (표 아니고 그냥 줄 목록) ===== */}
       <div className="grid grid-cols-2 gap-4">
+        {/* ----- UI: 상위 3명 ----- */}
         <Card>
           <p className="mb-3 text-sm font-bold text-[#1c1e21]">출석률 상위 사용자</p>
           <div>
@@ -127,6 +133,7 @@ const StatisticsPage = () => {
           </div>
         </Card>
 
+        {/* ----- UI: 하위 3명 - 80% 미만이면 % 숫자가 경고색으로 바뀜 ----- */}
         <Card>
           <p className="mb-3 text-sm font-bold text-[#1c1e21]">출석률 하위 사용자</p>
           <div>

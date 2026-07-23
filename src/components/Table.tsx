@@ -33,8 +33,10 @@ function Table<T extends object>({
   const cellWrapClass = fixedLayout ? 'break-words' : 'whitespace-nowrap'
 
   return (
+    // ===== UI: 카드 프레임 (테두리/radius/그림자 - 이제 Table 자체가 카드 역할까지 함) =====
     <div className="w-full overflow-hidden rounded-xl border border-[#e8e9ec] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <table className={`w-full text-left text-sm ${fixedLayout ? 'table-fixed' : ''}`}>
+        {/* ===== UI: 헤더 행 (배경 #fafbfc, 글자색 #8a8f98) ===== */}
         <thead>
           <tr>
             {columns.map((col) => (
@@ -48,6 +50,7 @@ function Table<T extends object>({
             ))}
           </tr>
         </thead>
+        {/* ===== UI: 본문 행 (비어있으면 emptyMessage, 아니면 columns.render로 셀 채움) ===== */}
         <tbody>
           {data.length === 0 ? (
             <tr>

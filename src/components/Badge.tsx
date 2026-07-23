@@ -10,6 +10,7 @@ interface BadgeProps {
   children: ReactNode
 }
 
+// ===== UI: 색상별 배경/글자색 - 배지 색만 바꾸고 싶으면 여기 값만 수정 =====
 const colorClasses: Record<BadgeColor, string> = {
   green: 'bg-[oklch(95%_0.05_152)] text-[oklch(42%_0.13_152)]',
   amber: 'bg-[oklch(95%_0.06_75)] text-[oklch(50%_0.14_75)]',
@@ -19,6 +20,7 @@ const colorClasses: Record<BadgeColor, string> = {
 }
 
 const Badge = ({ color = 'gray', children }: BadgeProps) => {
+  // ===== UI: 실제 렌더링 (모양/크기는 rounded-md px-2.5 py-0.5로 고정) =====
   return (
     <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ${colorClasses[color]}`}>
       {children}

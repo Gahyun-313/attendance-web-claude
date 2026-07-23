@@ -209,6 +209,15 @@ src/
   - NFC 위치를 한글 10자 기준 폭(`130px`, 이전 100px에서 확대)으로 늘림
   - 비고도 한글 10자 기준 폭(`130px`)으로 줄이고, 넘치는 텍스트는 말줄임표(`truncate`)로 처리 + `title` 속성으로 마우스 올리면 전체 텍스트 보이게 함
 
+- STEP 16 (2026-07-23, 완료): NFC 태그 UID를 수정 가능하게 변경 (사용자 요청). 브랜치 `feat/step16-editable-nfc-uid`
+  - STEP13에서 "UID는 하드웨어 고유값이라 수정 불가"로 잠가뒀던 걸 되돌림 — 등록/수정 폼 둘 다 UID 입력칸을 활성화
+  - 수정 시 UID 값도 실제로 저장되도록 `handleSubmitForm`의 edit 분기에 `uid` 필드 추가
+
+- STEP 17 (2026-07-23, 완료): 모든 컴포넌트/페이지 파일의 UI(JSX) 부분에 `===== UI: ... =====` 형식 주석 추가 (사용자가 나중에 직접 코드 보고 UI 수정할 수 있도록). 코드 동작은 안 바뀌고 주석만 추가됨
+  - 대상: `components/*.tsx` 8개 전부(Button/Input/Select/Badge/Card/Modal/Table/Pagination) + `Layout.tsx`, `pages/*.tsx` 9개 전부(Login/Dashboard/Sessions/Attendance/Users/NfcTags/Statistics/Notifications/Settings)
+  - 큰 섹션은 `===== UI: ... =====`, 그 안의 세부 블록은 `----- UI: ... -----`로 2단계 표기해서 필터바/통계카드/표/모달처럼 화면 안에서 뭐가 어디 있는지 스캔하기 쉽게 함
+  - `Pagination.tsx`엔 "아직 실제 화면에서 한 번도 안 쓰여서 STEP6~7의 색상 정정이 반영 안 된 상태"라는 TODO도 같이 남김
+
 ## 다음 작업
 
 1. 지금까지 구현한 6개 도메인 화면(세션/출석/사용자/NFC/통계/알림)은 전부 Claude Design 목업의 시드 데이터를 쓰고 있음 — 백엔드에 해당 API가 준비되는 대로 화면별로 순서 상관없이 실제 연동으로 교체

@@ -16,16 +16,19 @@ const Modal = ({ open, onClose, title, children, footer }: ModalProps) => {
   const stopPropagation = (e: MouseEvent) => e.stopPropagation()
 
   return (
+    // ===== UI: 배경 오버레이 (클릭하면 닫힘) =====
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,17,21,0.45)]"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
+      {/* ===== UI: 모달 카드 본체 (폭 460px 고정, 안쪽 클릭은 전파 막아서 안 닫히게) ===== */}
       <div
         className="w-full max-w-[460px] rounded-[14px] bg-white p-[26px_28px] shadow-[0_20px_60px_rgba(16,24,40,0.25)]"
         onClick={stopPropagation}
       >
+        {/* ===== UI: 헤더 (제목 + × 닫기 버튼) ===== */}
         {title && (
           <div className="mb-4 flex items-start justify-between">
             <h2 className="text-base font-bold text-[#1c1e21]">{title}</h2>
@@ -34,7 +37,9 @@ const Modal = ({ open, onClose, title, children, footer }: ModalProps) => {
             </button>
           </div>
         )}
+        {/* ===== UI: 본문 (children으로 각 화면이 채움) ===== */}
         <div>{children}</div>
+        {/* ===== UI: 하단 버튼 영역 (footer로 각 화면이 채움) ===== */}
         {footer && <div className="mt-[22px] flex justify-end gap-2">{footer}</div>}
       </div>
     </div>

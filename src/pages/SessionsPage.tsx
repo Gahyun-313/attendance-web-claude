@@ -241,6 +241,7 @@ const SessionsPage = () => {
 
   return (
     <>
+      {/* ===== UI: 상태 필터 select + 세션명 검색 입력칸 + 새 세션 생성 버튼 ===== */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2.5">
           <select
@@ -264,8 +265,10 @@ const SessionsPage = () => {
         <Button onClick={openCreate}>+ 새 세션 생성</Button>
       </div>
 
+      {/* ===== UI: 세션 목록 표 (컬럼 정의는 위쪽 columns 참고) ===== */}
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 세션이 없습니다." />
 
+      {/* ===== UI: 세션 상세 모달 (상세 버튼으로 열림, 배지/필드 나열 + 하단 버튼 3개) ===== */}
       <Modal
         open={detailSession !== null}
         onClose={() => setDetailId(null)}
@@ -323,7 +326,7 @@ const SessionsPage = () => {
         )}
       </Modal>
 
-      {/* 세션 생성/수정 - 목업엔 이 폼 시안이 없어서 세션 상세 모달과 같은 필드로 직접 구성 */}
+      {/* ===== UI: 세션 생성/수정 폼 모달 - 목업엔 이 폼 시안이 없어서 세션 상세 모달과 같은 필드로 직접 구성 ===== */}
       <Modal open={formMode !== null} onClose={closeForm} title={formMode === 'edit' ? '세션 수정' : '새 세션 생성'}>
         <form onSubmit={handleSubmitForm} className="flex flex-col gap-3.5">
           <Input

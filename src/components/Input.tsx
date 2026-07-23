@@ -11,8 +11,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 const Input = ({ label, search = false, className = '', ...props }: InputProps) => {
   return (
     <div className="flex w-full flex-col gap-1.5">
+      {/* ===== UI: 라벨 ===== */}
       {label && <label className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#4b5563]">{label}</label>}
       <div className="relative">
+        {/* ===== UI: 돋보기 아이콘 (search prop일 때만) ===== */}
         {search && (
           <svg
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9aa1ac]"
@@ -25,6 +27,7 @@ const Input = ({ label, search = false, className = '', ...props }: InputProps) 
             <path d="m14 14 4 4" strokeLinecap="round" />
           </svg>
         )}
+        {/* ===== UI: 실제 input - 테두리/포커스 색/비활성(disabled) 색 전부 여기서 관리 ===== */}
         <input
           className={`h-[38px] w-full rounded-lg border border-[#dcdfe4] bg-white text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-[#9aa1ac] ${search ? 'pl-9 pr-3' : 'px-3'} ${className}`}
           {...props}
