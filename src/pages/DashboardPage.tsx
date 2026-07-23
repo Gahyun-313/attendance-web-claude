@@ -1,3 +1,5 @@
+// 대시보드(홈) 화면. 오늘 하루의 세션/출석 현황을 통계 카드 + 차트 + 표로 요약해서 보여준다.
+// 아래 상수들은 전부 실제 API 연동 전까지 쓰는 정적 시드 데이터
 import { Badge, Card, Table } from '../components'
 import { attendanceStatusMeta } from '../utils/badgeColors'
 import type { TableColumn } from '../components'

@@ -1,3 +1,5 @@
+// 출석 현황 화면. 특정 세션의 출석 기록을 표로 보여주고, 그룹/이름/상태로 필터링하며
+// 개별 기록의 출석 상태(출석/지각/결석/대기)를 관리자가 수동으로 수정할 수 있다
 import { useMemo, useState, type FormEvent } from 'react'
 import { Badge, Button, Card, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -56,6 +58,7 @@ const AttendancePage = () => {
   const [editStatus, setEditStatus] = useState<AttendanceStatus>('PRESENT')
   const [editNote, setEditNote] = useState('')
 
+  // 그룹 + 이름 검색 + 상태 필터 세 조건을 모두 만족하는 출석 기록만 표에 보여줌
   const filtered = useMemo(() => {
     return records.filter((r) => {
       const matchesGroup = group === '전체 그룹' || r.group === group
@@ -65,6 +68,7 @@ const AttendancePage = () => {
     })
   }, [records, group, search, statusFilter])
 
+  // 상단 통계 카드에 쓸 상태별 인원 수 - 필터와 무관하게 전체 records 기준으로 집계
   const counts = useMemo(() => {
     const present = records.filter((r) => r.status === 'PRESENT').length
     const late = records.filter((r) => r.status === 'LATE').length

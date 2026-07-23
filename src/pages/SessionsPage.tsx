@@ -1,3 +1,5 @@
+// 출석 세션 관리 화면. 세션 목록을 조회/검색/필터링하고, 생성·수정·시작·종료할 수 있다.
+// 지금은 실제 서버 없이 useState로 클라이언트 메모리에서만 데이터를 관리한다(TODO 주석 참고)
 import { useMemo, useState, type FormEvent } from 'react'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -148,6 +150,7 @@ const SessionsPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<SessionFormState>(emptyForm)
 
+  // 상태 필터 + 세션명 검색어를 둘 다 만족하는 세션만 걸러서 표에 보여줌
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
       const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter

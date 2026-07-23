@@ -1,3 +1,4 @@
+// 앱 진입점(entry point). 순서: React Query 클라이언트 준비 → (개발 모드면) MSW mock 서버 시작 → 라우터로 화면 렌더링
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -5,6 +6,7 @@ import { RouterProvider } from 'react-router'
 import { router } from './router'
 import './index.css'
 
+// 서버 데이터 캐싱/재요청 정책 - 실패 시 1번만 재시도, 창 포커스 돌아와도 자동 재요청 안 함
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

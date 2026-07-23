@@ -218,6 +218,15 @@ src/
   - 큰 섹션은 `===== UI: ... =====`, 그 안의 세부 블록은 `----- UI: ... -----`로 2단계 표기해서 필터바/통계카드/표/모달처럼 화면 안에서 뭐가 어디 있는지 스캔하기 쉽게 함
   - `Pagination.tsx`엔 "아직 실제 화면에서 한 번도 안 쓰여서 STEP6~7의 색상 정정이 반영 안 된 상태"라는 TODO도 같이 남김
 
+- STEP 18 (2026-07-23, 완료): 전체 아키텍처 검토 + 처음 보는 사람 기준 이해 주석 추가 (사용자 요청). 브랜치 `docs/step18-architecture-review-comments`
+  - **아키텍처 검토 결과**: 폴더 구조(api/components/pages/types/utils/router/main)와 과설계 금지 규칙(§진행 방식)을 잘 지키고 있음 — Redux/Clean Architecture 등 없음, 전역 상태는 React Query만, 도메인 로직은 각 페이지 안에 로컬 `useState`로만 존재. 위반 사항 없음. 다만 다음은 "문제"는 아니고 참고용 관찰 사항으로만 기록 (사용자가 요청 안 해서 고치지 않음):
+    - `hooks/` 폴더가 관례에 있지만 아직 빈 상태 — 각 페이지가 useState/useMemo를 직접 씀. 실 API 연동 시작하면 `useSessions`류 커스텀 훅으로 옮길 여지 있음
+    - Sessions/Attendance/Users/NfcTags/Notifications 5개 페이지가 생성/수정 모달 열고 닫는 보일러플레이트(`openEdit`/`closeEdit`/`formMode` 등)가 거의 동일하게 반복됨 — 지금은 화면 수가 적어 공용 훅으로 뽑을 정도는 아니라고 판단, 나중에 화면이 늘면 고려
+    - `Pagination`이 여전히 미사용 상태로 STEP6~7의 색상 정정이 반영 안 됨 (STEP17에서도 이미 언급)
+  - **주석 추가**: 처음 보는 사람도 파일 하나만 열어서 "이 파일이 뭐 하는 파일인지" 알 수 있도록, 파일 상단 목적 설명이 없던 파일들에 한 줄~세 줄 요약 주석 추가 + 페이지의 핵심 `useMemo` 필터링 로직 위에 무슨 조건으로 거르는지 설명 추가. 코드 동작은 안 바뀜
+    - 대상: `main.tsx`, `api/auth.ts`, `mocks/browser.ts`, `components/index.ts`, `utils/badgeColors.ts`, `components/Button.tsx`, `components/Input.tsx`, `pages/LoginPage.tsx`, `pages/DashboardPage.tsx`, `pages/SessionsPage.tsx`(+필터 로직), `pages/AttendancePage.tsx`(+필터 로직), `pages/UsersPage.tsx`(+필터 로직)
+    - 나머지 파일들(types/*, router.tsx, axiosClient.ts, mocks/handlers.ts, NfcTagsPage/NotificationsPage/StatisticsPage/SettingsPage 등)은 STEP7~17에서 이미 맥락 설명 주석이 충분히 있어서 중복 추가 안 함
+
 ## 다음 작업
 
 1. 지금까지 구현한 6개 도메인 화면(세션/출석/사용자/NFC/통계/알림)은 전부 Claude Design 목업의 시드 데이터를 쓰고 있음 — 백엔드에 해당 API가 준비되는 대로 화면별로 순서 상관없이 실제 연동으로 교체

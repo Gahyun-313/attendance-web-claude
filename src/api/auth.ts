@@ -1,3 +1,5 @@
+// 인증 관련 API 함수 모음 (로그인/로그아웃/토큰 갱신). 실제 요청은 axiosClient가 처리하고
+// 여긴 각 엔드포인트별 요청/응답 타입만 지정해주는 얇은 wrapper
 import axiosClient from './axiosClient'
 import type { ApiResponse } from '../types/common'
 import type { LoginRequest, LoginResponse } from '../types/auth'

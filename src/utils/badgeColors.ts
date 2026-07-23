@@ -1,3 +1,5 @@
+// 도메인별 상태값(status)을 Badge 색상/한글 라벨로 변환하는 매핑 모음.
+// 상태 문자열 자체는 백엔드 enum과 동일하게 쓰고, "무슨 색으로 보여줄지"는 여기서만 결정한다
 import type { BadgeColor } from '../components/Badge'
 import type { SessionStatus } from '../types/session'
 import type { AttendanceStatus } from '../types/attendance'

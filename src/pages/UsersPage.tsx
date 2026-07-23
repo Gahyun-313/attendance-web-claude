@@ -1,3 +1,5 @@
+// 사용자(학생 계정) 관리 화면. 계정 목록을 조회/검색/필터링하고, 신규 계정 생성 및 정보 수정을 할 수 있다.
+// 여기서 다루는 StudentAccount는 관리자가 관리하는 "학생" 목록이고, 로그인한 관리자 본인 정보(User)와는 다른 도메인
 import { useMemo, useState, type FormEvent } from 'react'
 import { Badge, Button, Card, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -41,6 +43,7 @@ const UsersPage = () => {
   const [editId, setEditId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', email: '', group: GROUPS[0], active: true })
 
+  // 그룹 + 활성상태 + 이름/학번(id) 검색 세 조건을 모두 만족하는 사용자만 표에 보여줌
   const filtered = useMemo(() => {
     return users.filter((u) => {
       const matchesGroup = groupFilter === '전체 그룹' || u.group === groupFilter

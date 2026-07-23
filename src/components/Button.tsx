@@ -1,3 +1,4 @@
+// 공통 버튼 컴포넌트. variant로 색/스타일, size로 크기, active로 칩(chip) 선택 상태를 제어한다
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip' | 'brand'

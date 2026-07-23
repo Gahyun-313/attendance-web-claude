@@ -1,3 +1,4 @@
+// 공통 텍스트 입력 컴포넌트. label을 주면 위에 라벨이 붙고, search를 true로 주면 돋보기 아이콘이 붙는 검색창이 된다
 import type { InputHTMLAttributes, ReactNode } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

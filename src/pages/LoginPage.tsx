@@ -1,3 +1,5 @@
+// 로그인 화면. 사이드바가 없는 단독 페이지라 router.tsx에서 Layout 밖에 따로 등록돼있다.
+// 로그인 성공 시 토큰/사용자 정보를 localStorage에 저장하고 대시보드('/')로 이동한다
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
