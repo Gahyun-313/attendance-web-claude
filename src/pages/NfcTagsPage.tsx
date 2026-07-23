@@ -80,14 +80,20 @@ const NfcTagsPage = () => {
 
   const handleSubmitForm = (e: FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.location.trim()) return
+    if (!form.name.trim() || !form.uid.trim() || !form.location.trim()) return
 
     if (formMode === 'edit' && editingId !== null) {
       // TODO: 실제로는 PATCH /api/nfc-tags/:id 로 보내고 응답값으로 대체
       setTags((prev) =>
         prev.map((t) =>
           t.id === editingId
-            ? { ...t, name: form.name.trim(), location: form.location.trim(), session: form.session.trim() || null }
+            ? {
+                ...t,
+                name: form.name.trim(),
+                uid: form.uid.trim(),
+                location: form.location.trim(),
+                session: form.session.trim() || null,
+              }
             : t,
         ),
       )
@@ -96,7 +102,7 @@ const NfcTagsPage = () => {
       const newTag: NfcTag = {
         id: Date.now(),
         name: form.name.trim(),
-        uid: form.uid,
+        uid: form.uid.trim(),
         location: form.location.trim(),
         session: form.session.trim() || null,
         lastUsed: null,
@@ -145,6 +151,7 @@ const NfcTagsPage = () => {
 
   return (
     <>
+      {/* ===== UI: 통계 카드 4개 (전체/활성/비활성 태그 수, 오늘 인식 횟수 - 전부 정적 값) ===== */}
       <div className="grid grid-cols-4 gap-4">
         {statCards.map((card) => (
           <Card key={card.label}>
@@ -154,6 +161,7 @@ const NfcTagsPage = () => {
         ))}
       </div>
 
+      {/* ===== UI: 상태 필터 + 신규 태그 등록 버튼 ===== */}
       <div className="flex items-center justify-between">
         <select
           value={statusFilter}
@@ -169,9 +177,10 @@ const NfcTagsPage = () => {
         <Button onClick={openCreate}>+ 신규 태그 등록</Button>
       </div>
 
+      {/* ===== UI: 태그 목록 표 (UID 컬럼은 font-mono로 렌더) ===== */}
       <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 태그가 없습니다." />
 
-      {/* 등록/수정 - 목업엔 이 폼 시안이 없어서 직접 구성 */}
+      {/* ===== UI: 등록/수정 폼 모달 - 목업엔 이 폼 시안이 없어서 직접 구성 ===== */}
       <Modal open={formMode !== null} onClose={closeForm} title={formMode === 'edit' ? '태그 수정' : '신규 태그 등록'}>
         <form onSubmit={handleSubmitForm} className="flex flex-col gap-3.5">
           <Input
@@ -182,8 +191,16 @@ const NfcTagsPage = () => {
             required
           />
           <div>
-            <Input label="UID" value={form.uid} readOnly disabled />
-            <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">UID는 하드웨어 태그 고유값이라 직접 수정할 수 없습니다.</p>
+            {/* 등록 시엔 generateUid()로 임의 값을 채워두지만, 실제 하드웨어 UID로 바꿔 넣을 수 있게 수정 가능하게 열어둠 */}
+            <Input
+              label="UID"
+              placeholder="예: 04:A3:B2:1C:7E:F1"
+              value={form.uid}
+              onChange={(e) => setForm((f) => ({ ...f, uid: e.target.value }))}
+              className="font-mono"
+              required
+            />
+            <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">실제 태그에 새겨진 UID와 다르면 인식이 안 되니 정확히 입력하세요.</p>
           </div>
           <Input
             label="설치 위치"
