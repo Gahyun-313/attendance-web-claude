@@ -94,7 +94,7 @@ src/
 |---|---|
 | 로그인 | ✅ 완료 (실제 백엔드 연동 검증됨) |
 | 대시보드 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터) |
-| 출석 세션 관리 | ⬜ placeholder만 |
+| 출석 세션 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 클라이언트 필터/검색) |
 | 출석 현황 | ⬜ placeholder만 |
 | 사용자 관리 | ⬜ placeholder만 |
 | NFC 태그 관리 | ⬜ placeholder만 |
@@ -140,9 +140,25 @@ src/
   - `DashboardPage.tsx`: 통계 카드 4개, 시간대별 바 차트, 상태분포 도넛(conic-gradient), 진행중 세션 카드(pulse 애니메이션), 최근 출석 테이블 — 전부 Claude Design 목업의 시드 데이터 그대로 사용, 실 연동은 TODO
   - `index.css`: 목업에만 있고 실제 CSS엔 없던 `@keyframes livePulse` 추가 (진행중 세션 점 애니메이션에 필요)
 
+- STEP 6 후속 - 보안 이슈 (2026-07-23): 로컬에 `.git`이 없어져서 다시 `git init`하는 과정에서, `.env.example`/`CONTEXT.md` 커밋 히스토리에 실제 EC2 퍼블릭 IP(`43.201.20.36`)가 최초 커밋부터 그대로 남아있던 게 발견됨. 이 리포를 나중에 GitHub public으로 올릴 예정이라 **`git filter-branch`로 전체 11개 브랜치 히스토리를 rewrite해서 `YOUR_EC2_PUBLIC_IP` 플레이스홀더로 소급 교체** (실제 IP는 gitignore된 로컬 `.env`에만 남김). 이 시점부터 모든 브랜치의 커밋 해시가 바뀌었음 — 그 이전에 받은 번들 파일은 더 이상 유효하지 않음
+  - `.gitattributes` 신규 추가(`* text=auto eol=lf`) — 리포 재생성 과정에서 CRLF/LF가 섞여 전체 파일이 diff에 잡히는 문제 발견, 이후 재발 방지용
+
+- STEP 7 (2026-07-23, 완료): 출석 세션 관리 화면 구현. 브랜치 `feat/step7-sessions-page`
+  - `SessionsPage.tsx`: 상태 필터(전체/예정/진행중/종료/취소) + 세션명 검색(클라이언트 사이드) + 세션 테이블 + 세션 상세 모달. Claude Design 목업의 세션관리 화면 시드 데이터(6건) 그대로 사용, 실 연동은 TODO(`GET /api/sessions` 등)
+  - `types/session.ts` 신규: `Session`, `SessionStatus`(`SCHEDULED`/`ACTIVE`/`COMPLETED`/`CANCELED`) 타입
+  - `utils/badgeColors.ts`: `sessionStatusMeta` 추가 (예정=blue/진행중=green/종료=gray/취소=red)
+  - `Table`: STEP4 때 만든 `border-gray-200/rounded-md` 스타일을 목업 기준 카드 토큰(`#e8e9ec` 테두리, `rounded-xl`, 그림자, 헤더 행 `#fafbfc` 배경)으로 교체 — 이제 Table 자체가 카드 프레임을 겸함. `DashboardPage`의 "최근 출석 기록"도 Card로 이중 감싸던 걸 제거(카드 속 카드 방지)
+  - `Modal`: STEP4 때 시안이 없어서 임의로 잡았던 톤(`rounded-xl`, `bg-black/40`)을 목업의 세션 상세 모달 실측 토큰(`rounded-[14px]`, overlay `rgba(15,17,21,.45)`, 그림자 `0 20px 60px rgba(16,24,40,.25)`)으로 교체
+  - `Button`: `size` prop(`md`|`sm`) 추가 — 테이블 행 안의 "상세"/"수정" 같은 인라인 액션 버튼용. 앞으로 나올 화면(출석현황/사용자관리/NFC관리)에도 동일 패턴이 반복될 걸로 예상돼 공용화
+  - **빌드 검증**: 사용자 로컬에서 `npm install`이 끝나 `node_modules`가 실제로 존재하는 걸 확인하고 처음으로 `npx tsc --noEmit` 실행 — 이 과정에서 STEP2 이후 한 번도 안 걸렸던 진짜 버그 2개 발견/수정:
+    - `tsconfig.json`의 `baseUrl`/`paths`(`@/*`) — TS 6에서 deprecated돼 빌드 자체가 막힘, 실제 사용처가 없어서 제거
+    - `tsconfig.json`의 `target`/`lib`가 `ES2020`이라 `Layout.tsx`의 `matches.at(-1)`(배열 `.at()`, ES2022)가 타입 에러 — `ES2022`로 상향
+  - (참고) `npx vite build`는 사용자가 Windows에서 `npm install`한 네이티브 바이너리(rolldown)라 리눅스 샌드박스에서는 못 돌려봄(`Cannot find module '@rolldown/binding-linux-x64-gnu'`) — 타입체크만 샌드박스에서 확인, 실제 빌드는 로컬에서 `npm run build`로 검증 필요
+
 ## 다음 작업
 
-1. STEP 7~: 나머지 화면 구현 (세션관리/출석현황/사용자관리/NFC태그관리/통계/알림관리 + Add User·세션상세 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
+1. STEP 8~: 나머지 화면 구현 (출석현황/사용자관리/NFC태그관리/통계/알림관리 + Add User 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
+2. 로컬에 실제 git 저장소가 생겼으니, 이제 이 세션에서 매 STEP마다 `git bundle`을 새로 만들어 전달하는 대신 **브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋**하는 방식으로 전환 (샌드박스가 마운트된 D 드라이브에서 `git checkout -f` 등 델리트가 필요한 git 명령을 실행하면 FUSE 마운트 제약으로 계속 실패하는 걸 이번에 다시 확인함)
 
 ## 결정 사항 히스토리
 
@@ -155,4 +171,8 @@ src/
 - 2026-07-23: Claude Design 목업(`Admin Web Page Mockups.html`)이 Figma의 gray-800 색상 가정을 대체하는 최종 디자인 기준으로 확정 — 화면 7개를 전부 커버하고 실제 상태값/색상 로직까지 JS로 들어있어 Figma보다 구체적임 (§디자인 토큰 참고)
 - 2026-07-23: "조퇴"(EARLY_LEAVE) 상태는 최종적으로 존재하지 않는 것으로 확정 — Figma에만 있던 상태였고, 목업의 출석 상태(PRESENT/LATE/ABSENT/WAITING)와 실제 백엔드 enum 둘 다에 없음 확인
 - 2026-07-23: `Card`는 `className`으로 배경 오버라이드하는 방식 대신 `tone` prop 방식으로 확정 — Tailwind는 CSS 생성 순서가 HTML 클래스 순서와 무관하게 우선순위를 결정해서 className 문자열 이어붙이기로 배경색을 덮어쓰는 게 신뢰할 수 없음
+- 2026-07-23: 이 리포는 GitHub에 **public**으로 올릴 예정으로 확정 → 커밋 히스토리에 남아있던 실제 EC2 IP를 `filter-branch`로 전부 소급 제거. 이후 실제 서버 주소/키 등 민감정보는 항상 로컬 `.env`에만 두고 `.env.example`엔 플레이스홀더만 쓰는 걸 원칙으로 함
+- 2026-07-23: 샌드박스에서 마운트된 D 드라이브(`.git` 포함)에 대고 `git checkout -f`/`filter-branch` 같은 delete 필요한 git 명령을 실행하면 FUSE 마운트 제약(unlink 불가)으로 계속 깨짐 확인 → 앞으로는 파일 내용 수정(Write/Edit)까지만 샌드박스에서 하고, 실제 git 커밋/브랜치 작업은 브랜치명·코드·커밋 메시지를 안내해서 **사용자가 로컬에서 직접 실행**하는 방식으로 전환
+- 2026-07-23: `Table`/`Modal`을 STEP4의 임의 톤에서 STEP7에 확보한 목업 실측 토큰으로 교체 — Table이 자체 카드 프레임(테두리/radius/그림자)을 갖게 되면서, 화면에서 Table을 Card로 다시 감싸면 카드 속 카드가 되므로 그렇게 쓰지 않기로 함
+- 2026-07-23: `tsconfig.json`에 실제 버그 2건(`baseUrl`/`paths` deprecated, `lib`가 ES2020이라 `Array.prototype.at()` 타입 에러) 존재했던 걸 STEP7에서 최초로 `npx tsc --noEmit`을 돌려보고서야 발견 — 사용자 로컬에 `node_modules`가 생긴 이후부터는 코드 작성 시 가능하면 매번 타입체크까지 확인하기로 함
 - 2026-07-23: `Badge`는 도메인 결합적인 `status` prop 대신 순수 프레젠테이션 `color` prop으로 확정, 도메인→색상 매핑은 화면/유틸 레벨(`badgeColors.ts`)에서 담당하기로 함 — 목업의 `badge(kind, key)` 헬퍼 패턴을 따름
