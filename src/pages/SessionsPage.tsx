@@ -181,9 +181,7 @@ const SessionsPage = () => {
         <Button>+ 새 세션 생성</Button>
       </div>
 
-      <div className="mt-4">
-        <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 세션이 없습니다." />
-      </div>
+      <Table columns={columns} data={filtered} rowKey={(row) => row.id} emptyMessage="조건에 맞는 세션이 없습니다." />
 
       <Modal
         open={detailSession !== null}
