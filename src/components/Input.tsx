@@ -26,7 +26,7 @@ const Input = ({ label, search = false, className = '', ...props }: InputProps) 
           </svg>
         )}
         <input
-          className={`h-[38px] w-full rounded-lg border border-[#dcdfe4] bg-white text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)] ${search ? 'pl-9 pr-3' : 'px-3'} ${className}`}
+          className={`h-[38px] w-full rounded-lg border border-[#dcdfe4] bg-white text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-[#9aa1ac] ${search ? 'pl-9 pr-3' : 'px-3'} ${className}`}
           {...props}
         />
       </div>
