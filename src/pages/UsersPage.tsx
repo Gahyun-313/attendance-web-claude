@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Badge, Button, Card, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { userStatusMeta } from '../utils/badgeColors'
+import { GROUPS } from '../utils/groups'
 import type { StudentAccount } from '../types/student'
 
 // TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 사용자 관리 화면 시드 데이터를 그대로 씀.
@@ -17,11 +18,17 @@ const INITIAL_USERS: StudentAccount[] = [
   { id: 8, name: '오하준', email: 'hajun.oh@example.com', group: '개발1팀', firstDate: '2026-05-20', rate: 85, lateCount: 3, absentCount: 2, active: true },
 ]
 
-const GROUPS = ['개발1팀', '스터디 A조', '스터디 B조', '스터디 C조', 'CS스터디팀']
 const GROUP_FILTERS = ['전체 그룹', ...GROUPS]
 const STATUS_FILTERS = ['활성/비활성 전체', '활성', '비활성']
 
 const emptyForm = { studentId: '', name: '', email: '', password: '', group: GROUPS[0], note: '' }
+
+interface EditFormState {
+  name: string
+  email: string
+  group: string
+  active: boolean
+}
 
 const UsersPage = () => {
   const [users, setUsers] = useState<StudentAccount[]>(INITIAL_USERS)
@@ -30,6 +37,9 @@ const UsersPage = () => {
   const [search, setSearch] = useState('')
   const [showAddUser, setShowAddUser] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [detailId, setDetailId] = useState<number | null>(null)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<EditFormState>({ name: '', email: '', group: GROUPS[0], active: true })
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -70,19 +80,41 @@ const UsersPage = () => {
     {
       key: 'actions',
       header: '액션',
-      // TODO: 상세/수정은 백엔드 사용자 API 붙을 때 실제 동작 연결
-      render: () => (
+      render: (row) => (
         <div className="flex gap-1.5">
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={() => setDetailId(row.id)}>
             상세
           </Button>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
             수정
           </Button>
         </div>
       ),
     },
   ]
+
+  const detailUser = users.find((u) => u.id === detailId) ?? null
+  const editingUser = users.find((u) => u.id === editId) ?? null
+
+  const openEdit = (user: StudentAccount) => {
+    setEditForm({ name: user.name, email: user.email, group: user.group, active: user.active })
+    setEditId(user.id)
+  }
+  const closeEdit = () => setEditId(null)
+
+  const handleSaveEdit = (e: FormEvent) => {
+    e.preventDefault()
+    if (editId === null || !editForm.name.trim() || !editForm.email.trim()) return
+    // TODO: 실제로는 PATCH /api/users/:id 로 보내고 응답값으로 대체
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === editId
+          ? { ...u, name: editForm.name.trim(), email: editForm.email.trim(), group: editForm.group, active: editForm.active }
+          : u,
+      ),
+    )
+    closeEdit()
+  }
 
   const closeAddUser = () => {
     setShowAddUser(false)
@@ -215,6 +247,77 @@ const UsersPage = () => {
             <Button type="submit">계정 생성</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 사용자 상세 - 목업엔 이 모달 시안이 없어서 세션 상세 모달과 같은 톤으로 직접 구성 */}
+      <Modal open={detailUser !== null} onClose={() => setDetailId(null)} title={detailUser?.name}>
+        {detailUser && (
+          <>
+            <div className="-mt-2 mb-4">
+              <Badge color={userStatusMeta(detailUser.active).color}>{userStatusMeta(detailUser.active).label}</Badge>
+            </div>
+            <div className="grid grid-cols-[100px_1fr] gap-y-2.5 text-[13px]">
+              <span className="text-[#9aa1ac]">이메일</span>
+              <span className="font-medium text-[#1c1e21]">{detailUser.email}</span>
+              <span className="text-[#9aa1ac]">그룹</span>
+              <span className="font-medium text-[#1c1e21]">{detailUser.group}</span>
+              <span className="text-[#9aa1ac]">첫 출석일</span>
+              <span className="font-medium text-[#1c1e21]">{detailUser.firstDate}</span>
+              <span className="text-[#9aa1ac]">누적 출석률</span>
+              <span className="font-medium text-[#1c1e21]">{detailUser.rate}%</span>
+              <span className="text-[#9aa1ac]">지각/결석</span>
+              <span className="font-medium text-[#1c1e21]">
+                {detailUser.lateCount} / {detailUser.absentCount}
+              </span>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* 사용자 수정 - 목업엔 이 폼 시안이 없어서 Add User 모달 필드를 재사용해서 직접 구성 */}
+      <Modal open={editingUser !== null} onClose={closeEdit} title="사용자 수정">
+        {editingUser && (
+          <form onSubmit={handleSaveEdit} className="flex flex-col gap-3.5">
+            <Input
+              label="이름"
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+            <Input
+              label="이메일"
+              type="email"
+              value={editForm.email}
+              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              required
+            />
+            <Select
+              label="그룹"
+              value={editForm.group}
+              onChange={(e) => setEditForm((f) => ({ ...f, group: e.target.value }))}
+            >
+              {GROUPS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="상태"
+              value={editForm.active ? '활성' : '비활성'}
+              onChange={(e) => setEditForm((f) => ({ ...f, active: e.target.value === '활성' }))}
+            >
+              <option value="활성">활성</option>
+              <option value="비활성">비활성</option>
+            </Select>
+            <div className="mt-1 flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={closeEdit}>
+                취소
+              </Button>
+              <Button type="submit">저장</Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </>
   )
