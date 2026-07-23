@@ -95,7 +95,7 @@ src/
 | 로그인 | ✅ 완료 (실제 백엔드 연동 검증됨) |
 | 대시보드 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터) |
 | 출석 세션 관리 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 클라이언트 필터/검색) |
-| 출석 현황 | ⬜ placeholder만 |
+| 출석 현황 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터 + 그룹/이름/상태 필터) |
 | 사용자 관리 | ⬜ placeholder만 |
 | NFC 태그 관리 | ⬜ placeholder만 |
 | 통계 | ⬜ placeholder만 |
@@ -155,9 +155,17 @@ src/
     - `tsconfig.json`의 `target`/`lib`가 `ES2020`이라 `Layout.tsx`의 `matches.at(-1)`(배열 `.at()`, ES2022)가 타입 에러 — `ES2022`로 상향
   - (참고) `npx vite build`는 사용자가 Windows에서 `npm install`한 네이티브 바이너리(rolldown)라 리눅스 샌드박스에서는 못 돌려봄(`Cannot find module '@rolldown/binding-linux-x64-gnu'`) — 타입체크만 샌드박스에서 확인, 실제 빌드는 로컬에서 `npm run build`로 검증 필요
 
+- STEP 8 (2026-07-23, 완료): 출석 현황 조회 화면 구현. 브랜치 `feat/step8-attendance-page`
+  - `AttendancePage.tsx`: 상단 필터바(날짜/세션 select는 목업이 옵션 1개뿐이라 지금은 비활성 정적 표시, 그룹 select + 이름 검색은 실제 클라이언트 필터링) + 상태 필터 칩(전체/출석/지각/결석/대기, `Button variant="chip"` 재사용) + 5칸 통계 카드(대상자수/출석/지각/결석/출석률) + 9열 출석 테이블. Claude Design 목업의 출석 현황 화면 시드 데이터(8건, 백엔드 프로젝트 주간회의 세션 기준) 그대로 사용, 실 연동은 TODO(`GET /api/attendances` 등)
+  - `types/attendance.ts` 신규: `AttendanceRecord`, `AttendanceStatus` 타입 — 기존에 `badgeColors.ts`/`DashboardPage.tsx`에 흩어져 있던 인라인 유니언(`'PRESENT'|'LATE'|'ABSENT'|'WAITING'`)을 이 타입으로 통일
+  - 출석률(%)은 목업엔 정적 값(50%)으로 박혀있었는데, 실제로는 `present/total`을 반올림해서 계산하도록 구현 (정적 숫자를 그대로 베끼는 것보단 최소한의 실계산이 낫다고 판단)
+  - 상태 필터 칩은 새 컴포넌트 안 만들고 기존 `Button`의 `chip` variant(STEP4 때 이미 있었음)를 그대로 재사용 — 목업 스펙(비활성 회색 테두리, 활성 시 블루 배경/글자)과 거의 일치
+  - STEP7에서 만든 `SessionsPage`/신규 `AttendancePage`의 테이블 바로 위에 불필요한 `mt-4`가 있던 걸 발견해서 제거 — `Layout`의 `<main>`이 이미 `gap-[22px]`로 자식 간 간격을 주고 있어서 중복 여백이었음
+  - `DashboardPage.tsx`의 `RecentCheck.status` 타입도 `keyof typeof attendanceStatusMeta` 대신 새로 만든 `AttendanceStatus`를 import해서 쓰도록 정리
+
 ## 다음 작업
 
-1. STEP 8~: 나머지 화면 구현 (출석현황/사용자관리/NFC태그관리/통계/알림관리 + Add User 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
+1. STEP 9~: 나머지 화면 구현 (사용자관리/NFC태그관리/통계/알림관리 + Add User 모달) — Claude Design 목업에 전 화면 데이터/구조가 이미 상세히 나와있어서 참고 자료로 바로 사용 가능. 그때그때 필요한 api 함수 추가
 2. 로컬에 실제 git 저장소가 생겼으니, 이제 이 세션에서 매 STEP마다 `git bundle`을 새로 만들어 전달하는 대신 **브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋**하는 방식으로 전환 (샌드박스가 마운트된 D 드라이브에서 `git checkout -f` 등 델리트가 필요한 git 명령을 실행하면 FUSE 마운트 제약으로 계속 실패하는 걸 이번에 다시 확인함)
 
 ## 결정 사항 히스토리
