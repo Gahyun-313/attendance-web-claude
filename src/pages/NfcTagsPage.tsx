@@ -42,7 +42,11 @@ const NfcTagsPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<TagFormState>(emptyForm)
 
-  const tagsQuery = useQuery({ queryKey: ['nfcTags'], queryFn: listNfcTags })
+  // 상태 필터를 서버로도 실제 전달 (§9 "상태별 필터링"), 아래 filtered에서 한 번 더 걸러서 이중 안전망
+  const tagsQuery = useQuery({
+    queryKey: ['nfcTags', statusFilter],
+    queryFn: () => listNfcTags(statusFilter === 'ALL' ? undefined : statusFilter),
+  })
   const tags = tagsQuery.data ?? []
 
   const invalidateTags = () => queryClient.invalidateQueries({ queryKey: ['nfcTags'] })

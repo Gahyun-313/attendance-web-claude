@@ -38,7 +38,7 @@ const AttendancePage = () => {
   const [editStatus, setEditStatus] = useState<AttendanceStatus>('PRESENT')
   const [editReason, setEditReason] = useState('')
 
-  const sessionsQuery = useQuery({ queryKey: ['sessions'], queryFn: listSessions })
+  const sessionsQuery = useQuery({ queryKey: ['sessions'], queryFn: () => listSessions() })
   const sessions = sessionsQuery.data ?? []
 
   // 세션 목록이 로드되면 기본으로 진행중인 세션을(없으면 첫 세션을) 선택해줌
@@ -84,15 +84,16 @@ const AttendancePage = () => {
     })
   }, [records, group, search, statusFilter])
 
-  // 상단 통계 카드 - 서버의 출석 대시보드 API(dashboardQuery) 값을 그대로 사용
+  // 상단 통계 카드 - 서버의 출석 대시보드 API(dashboardQuery) 값을 그대로 사용.
+  // attendanceRate는 클라이언트가 재계산하지 않음 - 그룹 미지정 세션(targetCount=0)은 서버가 totalRecords로
+  // 근사해서 계산해주기 때문 (§12 결정사항)
   const dash = dashboardQuery.data
-  const rate = dash && dash.targetCount > 0 ? Math.round((dash.presentCount / dash.targetCount) * 100) : 0
   const statCards: StatCard[] = [
     { label: '대상자 수', value: `${dash?.targetCount ?? 0}명` },
     { label: '출석', value: `${dash?.presentCount ?? 0}명`, valueClassName: 'text-[oklch(42%_0.13_152)]' },
     { label: '지각', value: `${dash?.lateCount ?? 0}명`, valueClassName: 'text-[oklch(50%_0.14_75)]' },
     { label: '결석', value: `${dash?.absentCount ?? 0}명`, valueClassName: 'text-[oklch(48%_0.18_20)]' },
-    { label: '출석률', value: `${rate}%` },
+    { label: '출석률', value: `${dash ? Math.round(dash.attendanceRate) : 0}%` },
   ]
 
   const editingRecord = records.find((r) => r.id === editId) ?? null

@@ -68,8 +68,12 @@ const SessionsPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<SessionFormState>(emptyForm)
 
-  const sessionsQuery = useQuery({ queryKey: ['sessions'], queryFn: listSessions })
-  const nfcTagsQuery = useQuery({ queryKey: ['nfcTags'], queryFn: listNfcTags })
+  // 상태/검색어를 서버로도 실제 전달 (§9 "상태/세션명 필터링"), 아래 filtered에서 한 번 더 걸러서 이중 안전망
+  const sessionsQuery = useQuery({
+    queryKey: ['sessions', statusFilter, search],
+    queryFn: () => listSessions({ status: statusFilter === 'ALL' ? undefined : statusFilter, keyword: search.trim() || undefined }),
+  })
+  const nfcTagsQuery = useQuery({ queryKey: ['nfcTags'], queryFn: () => listNfcTags() })
   const sessions = sessionsQuery.data ?? []
   const nfcTags = nfcTagsQuery.data ?? []
 

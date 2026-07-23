@@ -22,11 +22,15 @@ export interface AttendanceStatusUpdateRequest {
   modifyReason: string
 }
 
-// 세션별 출석 대시보드 (targetCount 포함, §9 참고) - 나머지 카운트 필드명은 추정
+// 세션별 출석 대시보드 (targetCount 포함, §9 참고).
+// §12 결정사항: 그룹 미지정 세션(targetCount=0)은 서버가 totalRecords로 근사해서 attendanceRate를 계산해준다고
+// 명시돼있음 - 즉 출석률은 클라이언트가 presentCount/targetCount로 재계산하지 않고 서버가 내려주는 값을 그대로 씀
 export interface AttendanceDashboardStats {
   targetCount: number
+  totalRecords: number
   presentCount: number
   lateCount: number
   absentCount: number
   waitingCount: number
+  attendanceRate: number
 }

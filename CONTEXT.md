@@ -251,9 +251,16 @@ src/
   - `api/nfcTags.ts`, `api/sessions.ts`, `api/attendances.ts`, `api/notifications.ts`가 전부 이 헬퍼를 쓰도록 수정 (세션/출석/알림은 아직 실제로 Page인지 미확인이지만, 확인된 NFC 태그와 같은 패턴일 가능성이 높아 선제적으로 방어)
   - `api/users.ts`도 중복 로직 제거하고 같은 헬퍼로 통일
 
+- STEP 20 (2026-07-23, 완료): 사용자가 다시 검토한 `attendance-project-context.md`(§12 결정 사항)를 참고해 STEP19 구현 보강. 브랜치 `feat/step20-spec-review-followups`
+  - `AttendanceDashboardStats`에 `attendanceRate`/`totalRecords` 추가 — §12에 "그룹 미지정 세션(targetCount=0)은 서버가 totalRecords로 근사해서 attendanceRate를 계산해준다"고 명시돼있어, 클라이언트가 `presentCount/targetCount`로 재계산하지 않고 서버 값을 그대로 쓰도록 `AttendancePage`에서 수정 (이전엔 targetCount=0일 때 0%로 잘못 표시될 수 있었음)
+  - `api/users.ts`의 `listUsers`가 `groupName`/`keyword` 쿼리 파라미터를 실제로 서버에 전달하도록 변경 — §12에 `UserRepository.searchStudents`가 이 두 필터를 지원한다고 명시됨(이전엔 전체 조회 후 클라이언트에서만 걸렀음). `UsersPage`의 그룹/검색 필터가 바뀔 때마다 서버에 새로 요청하도록 `queryKey`에 반영, 활성/비활성 필터는 서버 파라미터가 문서에 없어 계속 클라이언트에서만 처리
+  - `api/sessions.ts`/`api/nfcTags.ts`의 목록 조회가 상태(및 세션명) 필터를 서버로도 전달하도록 변경 — §9에 "상태별 필터링"/"상태·세션명 필터링" 지원이 명시돼있음. 세션명 검색 파라미터의 정확한 이름은 문서에 없어 `keyword`로 추정해서 보냄(서버가 모르는 파라미터면 그냥 무시되니 안전). `SessionsPage`/`NfcTagsPage`는 서버 필터링 + 기존 클라이언트 필터링을 이중으로 유지(안전망)
+  - 이 과정에서 `queryFn: listSessions`처럼 파라미터를 받는 API 함수를 React Query에 직접 참조로 넘기면 안 된다는 실수를 tsc가 잡아줌 — React Query가 `queryFn`을 호출할 때 자체 컨텍스트 객체(`{queryKey, signal, ...}`)를 인자로 넘기기 때문에, 파라미터 없는 함수만 직접 참조 가능하고 파라미터가 있는 함수는 항상 `() => fn(params)` 형태로 감싸야 함 (`AttendancePage`의 `listSessions` 호출부 수정)
+  - `npx tsc --noEmit` 클린 확인
+
 ## 다음 작업
 
-1. STEP19에서 추정으로 채운 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 통계 API의 정확한 키)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
+1. STEP19~20에서 추정으로 채운 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
 2. 설정 화면은 백엔드 API 자체가 아직 없어서 계속 보류 (MSW로 GET/PUT organization, GET/PUT attendance-policy만 mock된 상태, STEP3)
 3. `axiosClient.ts`의 401 응답 인터셉터가 여전히 TODO 상태(refreshToken으로 갱신 시도 로직 없음) — 이제 실제 API를 계속 호출하게 됐으니 Access Token 만료(1시간) 후 401이 실제로 발생할 수 있어 우선순위를 올릴 필요 있음
 4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 세션 목록의 "출석률" 컬럼은 대응하는 백엔드 API가 없어서 계속 시드 데이터 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청

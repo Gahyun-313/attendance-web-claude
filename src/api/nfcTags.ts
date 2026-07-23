@@ -26,11 +26,12 @@ const mapNfcTag = (dto: NfcTagResponseDto): NfcTag => ({
   status: dto.status,
 })
 
-export const listNfcTags = async (): Promise<NfcTag[]> => {
+// status는 §9 "목록 조회 (상태별 필터링)" 기준으로 서버에 실제 전달 (ALL이면 전체 조회)
+export const listNfcTags = async (status?: NfcTagStatus): Promise<NfcTag[]> => {
   // 2026-07-23 실제 응답 확인됨: content/pageable 등을 포함한 Spring Data Page 형태로 옴 (배열 아님)
   const { data } = await axiosClient.get<ApiResponse<PageResponse<NfcTagResponseDto> | NfcTagResponseDto[]>>(
     '/nfc-tags',
-    { params: { size: 1000 } },
+    { params: { size: 1000, status } },
   )
   return unwrapListPayload(data.data).map(mapNfcTag)
 }

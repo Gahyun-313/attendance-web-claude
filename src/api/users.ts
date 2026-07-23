@@ -2,6 +2,8 @@
 // GET /api/users는 "페이징" 지원이라고 명시돼있는데 정확한 페이지 파라미터/응답 포맷(배열 vs Page 래퍼)은
 // 문서에 없어서, 실제 UI가 아직 페이지네이션을 안 쓰는 점을 감안해 size를 크게 줘서 사실상 전체를 한 번에 받고
 // 응답이 배열이든 PageResponse든 둘 다 처리하도록 방어적으로 작성함 (TODO: 실제 응답 보고 정리)
+// §12 결정사항: UserRepository.searchStudents가 groupName/keyword 선택 필터를 지원한다고 명시돼있어
+// 서버사이드로 실제 전달함 (활성/비활성은 문서에 파라미터가 없어서 화면에서 계속 클라이언트 필터링)
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
 import type { CreateUserRequest, StudentAccount, UserUpdateRequest } from '../types/student'
@@ -30,9 +32,14 @@ const mapUser = (dto: UserResponseDto): StudentAccount => ({
   active: dto.active,
 })
 
-export const listUsers = async (): Promise<StudentAccount[]> => {
+export interface ListUsersParams {
+  groupName?: string
+  keyword?: string
+}
+
+export const listUsers = async (params: ListUsersParams = {}): Promise<StudentAccount[]> => {
   const { data } = await axiosClient.get<ApiResponse<PageResponse<UserResponseDto> | UserResponseDto[]>>('/users', {
-    params: { size: 1000 },
+    params: { size: 1000, groupName: params.groupName, keyword: params.keyword },
   })
   return unwrapListPayload(data.data).map(mapUser)
 }

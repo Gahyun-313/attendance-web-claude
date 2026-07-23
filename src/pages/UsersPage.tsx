@@ -34,7 +34,15 @@ const UsersPage = () => {
   const [editId, setEditId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<EditFormState>({ name: '', email: '', group: GROUPS[0] })
 
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers })
+  // 그룹/검색어는 서버(UserRepository.searchStudents, §12)로 실제 전달 - 값이 바뀌면 새로 조회
+  const usersQuery = useQuery({
+    queryKey: ['users', groupFilter, search],
+    queryFn: () =>
+      listUsers({
+        groupName: groupFilter === '전체 그룹' ? undefined : groupFilter,
+        keyword: search.trim() || undefined,
+      }),
+  })
   const groupsQuery = useQuery({ queryKey: ['userGroups'], queryFn: listUserGroups })
   const baseUsers = usersQuery.data ?? []
   // 그룹 목록 API가 비어있거나 아직 안 왔으면 기존 정적 목록(GROUPS)을 폴백으로 사용
@@ -64,18 +72,11 @@ const UsersPage = () => {
   })
   const deactivateMutation = useMutation({ mutationFn: deactivateUser, onSuccess: invalidateUsers })
 
-  // 그룹 + 활성상태 + 이름/학번(id) 검색 세 조건을 모두 만족하는 사용자만 표에 보여줌
+  // 그룹/검색은 이미 서버 쿼리에 반영됨(위 usersQuery) - 활성/비활성만 클라이언트에서 마저 거름
+  // (§9/§12엔 활성상태 필터 파라미터가 없어서 서버에 못 보냄)
   const filtered = useMemo(() => {
-    return users.filter((u) => {
-      const matchesGroup = groupFilter === '전체 그룹' || u.group === groupFilter
-      const matchesStatus =
-        statusFilter === '활성/비활성 전체' || (statusFilter === '활성' ? u.active : !u.active)
-      const q = search.trim()
-      const matchesSearch = q === '' || u.name.includes(q) || u.studentId.includes(q)
-      return matchesGroup && matchesStatus && matchesSearch
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, groupFilter, statusFilter, search])
+    return users.filter((u) => statusFilter === '활성/비활성 전체' || (statusFilter === '활성' ? u.active : !u.active))
+  }, [users, statusFilter])
 
   // 대시보드 상단 4개 통계 카드는 목업에서도 users 배열이 아니라 정적 값이라 그대로 둠
   // TODO: 실제로는 GET /api/users/dashboard로 교체 (지금은 §9 기준 미완료 상태라 MSW mock 사용중, main.tsx/handlers.ts 참고)

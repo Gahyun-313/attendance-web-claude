@@ -39,11 +39,16 @@ const mapSession = (dto: SessionResponseDto): Session => ({
   nfcTagId: dto.nfcTagId ?? null,
 })
 
-export const listSessions = async (): Promise<Session[]> => {
+export interface ListSessionsParams {
+  status?: SessionStatus
+  keyword?: string // 세션명 검색 - §9 "상태/세션명 필터링" 기준, 정확한 파라미터명은 미확인이라 keyword로 추정
+}
+
+export const listSessions = async (params: ListSessionsParams = {}): Promise<Session[]> => {
   // NFC 태그 목록에서 Spring Data Page 래퍼(content/pageable 등)로 오는 게 실제 확인돼서, 세션도 같은 방식일 수 있어 방어적으로 처리
   const { data } = await axiosClient.get<ApiResponse<PageResponse<SessionResponseDto> | SessionResponseDto[]>>(
     '/sessions',
-    { params: { size: 1000 } },
+    { params: { size: 1000, status: params.status, keyword: params.keyword } },
   )
   return unwrapListPayload(data.data).map(mapSession)
 }
