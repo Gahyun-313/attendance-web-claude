@@ -92,7 +92,7 @@ src/
 
 | 화면 | 상태 |
 |---|---|
-| 로그인 | ✅ 완료 (실제 백엔드 연동 검증됨) |
+| 로그인 | ✅ 완료 (아이디/비밀번호 + 구글/카카오 소셜 로그인·가입 전부 실 연동 검증됨, 2026-07-25) |
 | 대시보드 | ✅ 완료 (Claude Design 목업 기준, 시드 데이터) |
 | 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작) |
 | 출석 현황 | ✅ 완료 (필터 + 상태 수정 모달 동작) |
@@ -258,14 +258,14 @@ src/
   - 이 과정에서 `queryFn: listSessions`처럼 파라미터를 받는 API 함수를 React Query에 직접 참조로 넘기면 안 된다는 실수를 tsc가 잡아줌 — React Query가 `queryFn`을 호출할 때 자체 컨텍스트 객체(`{queryKey, signal, ...}`)를 인자로 넘기기 때문에, 파라미터 없는 함수만 직접 참조 가능하고 파라미터가 있는 함수는 항상 `() => fn(params)` 형태로 감싸야 함 (`AttendancePage`의 `listSessions` 호출부 수정)
   - `npx tsc --noEmit` 클린 확인
 
-- STEP 21 (2026-07-24, 완료): 사용자가 검토해서 갱신한 `api-specification.md`를 참고해 STEP19~20의 추정 필드명 3건 수정. 브랜치 `fix/step21-api-spec-corrections`
+- STEP 21 (2026-07-24, 완료): 사용자가 검토해서 갱신한 `api-specification.md`를 참고해 STEP19~20의 추정 필드명 3건 수정. STEP22와 함께 브랜치 `feat/step21-22-api-fixes-and-social-login`에서 커밋됨(실제로는 두 STEP을 한 브랜치/커밋으로 합쳐서 진행)
   - `AttendanceDashboardStats`: `presentCount/lateCount/absentCount/waitingCount`로 추정했던 필드명을 실제 `present/late/absent/waiting`으로 수정 (`types/attendance.ts`, `AttendancePage.tsx`)
   - `NfcTagUpdateRequest`에서 `uid` 제거 — STEP16에서 "수정 화면에서 UID도 바꿀 수 있게" 요청받아 넣었었는데, 실제 백엔드 수정 API는 `name/description/location`만 받고 `uid`는 무시함. `NfcTagsPage`의 UID 입력을 수정 모드에서 다시 읽기 전용으로 되돌림(등록 시에만 지정 가능)
   - `NotificationRequest`에 필수 필드 `sendType`('IMMEDIATE'|'SCHEDULED') 추가 — 문서에 없던 필드였는데 사용자가 실제 컨트롤러 확인 후 알려줌. `NotificationsPage`에서 `scheduledAt` 입력 여부로 자동 결정(입력하면 SCHEDULED, 비우면 IMMEDIATE)해서 보냄
   - (참고) `api-specification.md`에 알림 API 3종이 "미구현"으로 표기된 건 문서 갱신 누락으로 확인됨 — STEP19에서 연동한 화면은 계속 유효
   - `npx tsc --noEmit` 클린 확인
 
-- STEP 22 (2026-07-24, 완료): 소셜 로그인(구글/카카오) + 이메일 인증 가입 신규 구현, `multi-tenancy-plan.md` 기준 알려진 한계 반영. 브랜치 `feat/step22-social-login-signup`
+- STEP 22 (2026-07-24, 완료): 소셜 로그인(구글/카카오) + 이메일 인증 가입 신규 구현, `multi-tenancy-plan.md` 기준 알려진 한계 반영. STEP21과 함께 브랜치 `feat/step21-22-api-fixes-and-social-login`에서 커밋됨
   - **신규**: `src/utils/loadScript.ts`(외부 SDK `<script>` 동적 로드+캐시 헬퍼), `src/types/oauth.d.ts`(`window.google`/`window.Kakao` 앰비언트 타입 선언 — 두 SDK 다 npm 패키지 아니라 공식 `@types` 없음)
   - `types/auth.ts`: `OAuthProvider`, `OAuthLoginRequest`, `EmailJoinRequest`, `EmailJoinVerifyRequest` 타입 추가
   - `api/auth.ts`: `oauthLogin(provider, req)`, `requestEmailJoinCode(req)`, `verifyEmailJoinCode(req)` 추가
@@ -279,6 +279,14 @@ src/
   - **알려진 한계(사용자 확인 완료, 의도적으로 그대로 진행)**: 세션/사용자/통계(`/api/sessions`, `/api/users`, `/api/statistics`)는 JWT 기반으로 완전 자동 organizationId 필터링되지만(다른 단체 리소스 직접 조회 시 403이 아니라 404), **NFC 태그(`/api/nfc-tags`)와 출석 기록(`/api/attendances`, `check-in`/`me` 제외)은 organizationId 필터링이 서버 코드에 아예 없는 상태**임을 컨트롤러/서비스 직접 확인으로 사용자가 알려줌. 현재는 테스트 단체가 `ATT-DEFAULT` 하나뿐이라 겉으로 문제가 드러나지 않지만, 단체가 여러 개가 되면 NFC 태그 관리·출석 상세 화면이 다른 단체 데이터까지 섞어서 보여주게 됨 — 백엔드에서 별도로 고칠지 결정 중이므로, 고쳐지면 알려주기로 함(그 전까지 프론트 쪽에서 추가로 organizationId를 넣거나 걸러낼 수 있는 방법은 없음 - 서버가 아예 안 물어봄)
   - `npx tsc --noEmit` 클린 확인
 
+- STEP 22 후속 확인 (2026-07-25, 완료): 사용자가 로컬에서 실제로 구글/카카오 로그인 테스트 → 둘 다 성공 확인
+  - 테스트 중 `kauth.kakao.com/oauth/token 401`, `accounts.google.com/gsi/status 403`, `/api/auth/oauth/google 502` 에러가 있었는데, 원인은 코드가 아니라 **각 provider 콘솔의 도메인/오리진 미등록**이었음
+    - 구글: Cloud Console → 사용자 인증 정보 → OAuth 클라이언트 → "승인된 자바스크립트 원본"에 `http://localhost:5173` 등록 필요
+    - 카카오: 디벨로퍼스 → 앱 설정(JavaScript 키) → "JavaScript SDK 도메인" + "카카오 로그인 리다이렉트 URI" 둘 다 `http://localhost:5173` 등록 필요 (팝업 기반 `Kakao.Auth.login()`을 쓰는데도 두 필드 다 요구됨)
+  - 디버깅 중 "카카오 최신 공식 문서는 `Kakao.Auth.authorize()`(페이지 리다이렉트+인가코드) 방식만 다루고 `Kakao.Auth.login()`은 legacy라 마이그레이션이 필요한가?"라는 가설을 세웠었는데, **도메인 등록만으로 해결돼서 마이그레이션 불필요한 것으로 결론남** (현재 구현 그대로 유지)
+  - 502(백엔드 게이트웨이 에러)는 재현 시점에 백엔드가 일시적으로 불안정했던 것으로 추정, 이후 재확인 시 해결됨
+  - 코드 변경 없음 (콘솔 설정 + CONTEXT.md 기록만)
+
 ## 다음 작업
 
 1. STEP19~21에서도 여전히 추정으로 남아있는 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
@@ -286,7 +294,7 @@ src/
 3. `axiosClient.ts`의 401 응답 인터셉터가 여전히 TODO 상태(refreshToken으로 갱신 시도 로직 없음) — 이제 실제 API를 계속 호출하게 됐으니 Access Token 만료(1시간) 후 401이 실제로 발생할 수 있어 우선순위를 올릴 필요 있음
 4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 세션 목록의 "출석률" 컬럼은 대응하는 백엔드 API가 없어서 계속 시드 데이터 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청
 5. **NFC 태그/출석 기록 API의 organizationId 필터링 누락(STEP22 참고)** — 백엔드에서 고쳐지면 알려주기로 함. 그 전까지 다른 단체가 실제로 생기면 문제가 드러날 수 있음을 인지하고 있을 것
-6. 소셜 로그인 실 동작 확인 필요 — 로컬 `.env`에 실제 `VITE_GOOGLE_CLIENT_ID`/`VITE_KAKAO_JS_KEY`를 채운 뒤, 각 provider 콘솔에 허용 리다이렉트/JS 오리진으로 로컬 개발 주소(`http://localhost:5173` 등)가 등록돼있는지 확인 필요 (샌드박스는 네트워크 제약상 실제 SDK 호출까지는 검증 못 함)
+6. ~~소셜 로그인 실 동작 확인~~ → STEP22 후속 확인(2026-07-25)에서 구글/카카오 둘 다 실제 로그인 성공 확인 완료. 배포(EC2) 도메인으로 소셜 로그인 쓸 계획이면, 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 동일하게 등록 필요
 7. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
 8. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
 
