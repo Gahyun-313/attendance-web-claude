@@ -37,7 +37,8 @@ export const logout = async (): Promise<void> => {
   await axiosClient.post('/auth/logout')
 }
 
-// TODO: 요청 바디 형태(refreshToken을 body로 보내는지, 헤더로 보내는지)는 실제 연동 때 확인 필요
+// 2026-07-25: 401 자동 갱신은 axiosClient.ts의 응답 인터셉터가 순환참조 방지를 위해 별도 axios
+// 인스턴스로 직접 처리함(이 함수를 재사용하지 않음) - 이 함수는 화면에서 수동으로 갱신을 트리거하고 싶을 때 대비해 유지
 export const refresh = async (refreshToken: string): Promise<LoginResponse> => {
   const { data } = await axiosClient.post<ApiResponse<LoginResponse>>('/auth/refresh', {
     refreshToken,
