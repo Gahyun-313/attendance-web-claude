@@ -1,7 +1,7 @@
 // 공통 버튼 컴포넌트. variant로 색/스타일, size로 크기, active로 칩(chip) 선택 상태를 제어한다
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip' | 'brand'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip' | 'brand' | 'kakao'
 type ButtonSize = 'md' | 'sm'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,6 +21,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   ghost: 'text-gray-500 underline hover:text-gray-700',
   chip: 'bg-white text-[#8a8f98] border border-[#e8e9ec] rounded-full hover:bg-gray-50',
   brand: 'bg-blue-600 text-white hover:bg-blue-700',
+  // 카카오 로그인/가입 버튼 전용 - 카카오 브랜드 가이드 색(#FEE500 배경 + 어두운 텍스트), 로그인 화면에서만 사용
+  kakao: 'bg-[#FEE500] text-[#3C1E1E] hover:bg-[#f5dc00]',
 }
 
 const Button = ({ variant = 'primary', size = 'md', active = false, className = '', children, ...props }: ButtonProps) => {

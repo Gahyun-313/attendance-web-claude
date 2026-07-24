@@ -90,9 +90,9 @@ const AttendancePage = () => {
   const dash = dashboardQuery.data
   const statCards: StatCard[] = [
     { label: '대상자 수', value: `${dash?.targetCount ?? 0}명` },
-    { label: '출석', value: `${dash?.presentCount ?? 0}명`, valueClassName: 'text-[oklch(42%_0.13_152)]' },
-    { label: '지각', value: `${dash?.lateCount ?? 0}명`, valueClassName: 'text-[oklch(50%_0.14_75)]' },
-    { label: '결석', value: `${dash?.absentCount ?? 0}명`, valueClassName: 'text-[oklch(48%_0.18_20)]' },
+    { label: '출석', value: `${dash?.present ?? 0}명`, valueClassName: 'text-[oklch(42%_0.13_152)]' },
+    { label: '지각', value: `${dash?.late ?? 0}명`, valueClassName: 'text-[oklch(50%_0.14_75)]' },
+    { label: '결석', value: `${dash?.absent ?? 0}명`, valueClassName: 'text-[oklch(48%_0.18_20)]' },
     { label: '출석률', value: `${dash ? Math.round(dash.attendanceRate) : 0}%` },
   ]
 

@@ -96,8 +96,8 @@ const NfcTagsPage = () => {
     if (!form.name.trim() || !form.uid.trim() || !form.location.trim()) return
 
     if (formMode === 'edit' && editingId !== null) {
+      // uid는 안 보냄 - 실제 PUT /api/nfc-tags/:id는 uid를 받지 않음(STEP21, api-specification.md로 확인)
       const req: NfcTagUpdateRequest = {
-        uid: form.uid.trim(),
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         location: form.location.trim(),
@@ -197,7 +197,8 @@ const NfcTagsPage = () => {
             required
           />
           <div>
-            {/* 등록 시엔 generateUid()로 임의 값을 채워두지만, 실제 하드웨어 UID로 바꿔 넣을 수 있게 수정 가능하게 열어둠 */}
+            {/* 등록 시엔 generateUid()로 임의 값을 채워 편집 가능하게 열어두지만, 수정 모드에선 읽기 전용으로 잠금
+                - 실제 PUT /api/nfc-tags/:id가 uid를 안 받아서(STEP21) 여기서 바꿔도 반영되지 않기 때문 */}
             <Input
               label="UID"
               placeholder="예: 04:A3:B2:1C:7E:F1"
@@ -205,9 +206,13 @@ const NfcTagsPage = () => {
               onChange={(e) => setForm((f) => ({ ...f, uid: e.target.value }))}
               className="font-mono"
               required
+              readOnly={formMode === 'edit'}
+              disabled={formMode === 'edit'}
             />
             <p className="mt-[5px] text-[11.5px] text-[#9aa1ac]">
-              실제 태그에 새겨진 UID와 다르면 인식이 안 되니 정확히 입력하세요. (수정 시 UID 변경은 서버가 거절할 수도 있음)
+              {formMode === 'edit'
+                ? 'UID는 하드웨어 고유값이라 수정할 수 없습니다.'
+                : '실제 태그에 새겨진 UID와 다르면 인식이 안 되니 정확히 입력하세요.'}
             </p>
           </div>
           <Input

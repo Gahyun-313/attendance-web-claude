@@ -258,14 +258,37 @@ src/
   - 이 과정에서 `queryFn: listSessions`처럼 파라미터를 받는 API 함수를 React Query에 직접 참조로 넘기면 안 된다는 실수를 tsc가 잡아줌 — React Query가 `queryFn`을 호출할 때 자체 컨텍스트 객체(`{queryKey, signal, ...}`)를 인자로 넘기기 때문에, 파라미터 없는 함수만 직접 참조 가능하고 파라미터가 있는 함수는 항상 `() => fn(params)` 형태로 감싸야 함 (`AttendancePage`의 `listSessions` 호출부 수정)
   - `npx tsc --noEmit` 클린 확인
 
+- STEP 21 (2026-07-24, 완료): 사용자가 검토해서 갱신한 `api-specification.md`를 참고해 STEP19~20의 추정 필드명 3건 수정. 브랜치 `fix/step21-api-spec-corrections`
+  - `AttendanceDashboardStats`: `presentCount/lateCount/absentCount/waitingCount`로 추정했던 필드명을 실제 `present/late/absent/waiting`으로 수정 (`types/attendance.ts`, `AttendancePage.tsx`)
+  - `NfcTagUpdateRequest`에서 `uid` 제거 — STEP16에서 "수정 화면에서 UID도 바꿀 수 있게" 요청받아 넣었었는데, 실제 백엔드 수정 API는 `name/description/location`만 받고 `uid`는 무시함. `NfcTagsPage`의 UID 입력을 수정 모드에서 다시 읽기 전용으로 되돌림(등록 시에만 지정 가능)
+  - `NotificationRequest`에 필수 필드 `sendType`('IMMEDIATE'|'SCHEDULED') 추가 — 문서에 없던 필드였는데 사용자가 실제 컨트롤러 확인 후 알려줌. `NotificationsPage`에서 `scheduledAt` 입력 여부로 자동 결정(입력하면 SCHEDULED, 비우면 IMMEDIATE)해서 보냄
+  - (참고) `api-specification.md`에 알림 API 3종이 "미구현"으로 표기된 건 문서 갱신 누락으로 확인됨 — STEP19에서 연동한 화면은 계속 유효
+  - `npx tsc --noEmit` 클린 확인
+
+- STEP 22 (2026-07-24, 완료): 소셜 로그인(구글/카카오) + 이메일 인증 가입 신규 구현, `multi-tenancy-plan.md` 기준 알려진 한계 반영. 브랜치 `feat/step22-social-login-signup`
+  - **신규**: `src/utils/loadScript.ts`(외부 SDK `<script>` 동적 로드+캐시 헬퍼), `src/types/oauth.d.ts`(`window.google`/`window.Kakao` 앰비언트 타입 선언 — 두 SDK 다 npm 패키지 아니라 공식 `@types` 없음)
+  - `types/auth.ts`: `OAuthProvider`, `OAuthLoginRequest`, `EmailJoinRequest`, `EmailJoinVerifyRequest` 타입 추가
+  - `api/auth.ts`: `oauthLogin(provider, req)`, `requestEmailJoinCode(req)`, `verifyEmailJoinCode(req)` 추가
+  - `LoginPage.tsx` 전면 개편 — `mode: 'login'|'signup'` 토글로 한 화면에서 로그인/가입 전환
+    - 로그인 모드: 기존 아이디/비밀번호 폼 + "Google로 로그인"/"Kakao로 로그인" 버튼(이미 연동된 계정 전용, organizationCode 안 보냄)
+    - 가입 모드: 단체 코드 입력 + Google/Kakao로 가입(organizationCode 같이 전송) + 이메일 인증 2단계(코드 요청 → 코드/비밀번호/이름 확인) 서브플로우
+    - 구글 One Tap 콜백은 `initialize()` 시 한 번만 등록되는 구조라, 콜백 내부에서 `mode`/`organizationCode` 같은 state를 직접 참조하면 등록 시점 값에 갇히는 stale closure 문제가 생김 → 실제 처리 함수를 `useRef`에 담고 매 렌더마다 갱신, 콜백은 항상 ref를 통해 최신 함수를 호출하도록 구현
+    - `handleAuthSuccess()` 공통 헬퍼로 일반 로그인/소셜 로그인/이메일 가입 성공 시 토큰 저장+이동 로직 통일
+  - `components/Button.tsx`에 `kakao` variant 추가(#FEE500 배경) — className 문자열로 배경색을 덮어쓰는 방식은 Tailwind가 클래스 순서와 무관하게 우선순위를 정해서 신뢰할 수 없다는 기존 결정(§결정사항 2026-07-23 Card 관련)과 동일한 이유로 회피
+  - `.env.example`에 `VITE_GOOGLE_CLIENT_ID`/`VITE_KAKAO_JS_KEY` 플레이스홀더 추가 — 실제 값은 사용자가 로컬 `.env`에 채워야 소셜 버튼이 동작함(안 채워지면 버튼 클릭 시 안내 메시지만 뜨고 요청 자체를 안 보냄)
+  - **알려진 한계(사용자 확인 완료, 의도적으로 그대로 진행)**: 세션/사용자/통계(`/api/sessions`, `/api/users`, `/api/statistics`)는 JWT 기반으로 완전 자동 organizationId 필터링되지만(다른 단체 리소스 직접 조회 시 403이 아니라 404), **NFC 태그(`/api/nfc-tags`)와 출석 기록(`/api/attendances`, `check-in`/`me` 제외)은 organizationId 필터링이 서버 코드에 아예 없는 상태**임을 컨트롤러/서비스 직접 확인으로 사용자가 알려줌. 현재는 테스트 단체가 `ATT-DEFAULT` 하나뿐이라 겉으로 문제가 드러나지 않지만, 단체가 여러 개가 되면 NFC 태그 관리·출석 상세 화면이 다른 단체 데이터까지 섞어서 보여주게 됨 — 백엔드에서 별도로 고칠지 결정 중이므로, 고쳐지면 알려주기로 함(그 전까지 프론트 쪽에서 추가로 organizationId를 넣거나 걸러낼 수 있는 방법은 없음 - 서버가 아예 안 물어봄)
+  - `npx tsc --noEmit` 클린 확인
+
 ## 다음 작업
 
-1. STEP19~20에서 추정으로 채운 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
+1. STEP19~21에서도 여전히 추정으로 남아있는 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
 2. 설정 화면은 백엔드 API 자체가 아직 없어서 계속 보류 (MSW로 GET/PUT organization, GET/PUT attendance-policy만 mock된 상태, STEP3)
 3. `axiosClient.ts`의 401 응답 인터셉터가 여전히 TODO 상태(refreshToken으로 갱신 시도 로직 없음) — 이제 실제 API를 계속 호출하게 됐으니 Access Token 만료(1시간) 후 401이 실제로 발생할 수 있어 우선순위를 올릴 필요 있음
 4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 세션 목록의 "출석률" 컬럼은 대응하는 백엔드 API가 없어서 계속 시드 데이터 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청
-5. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
-6. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
+5. **NFC 태그/출석 기록 API의 organizationId 필터링 누락(STEP22 참고)** — 백엔드에서 고쳐지면 알려주기로 함. 그 전까지 다른 단체가 실제로 생기면 문제가 드러날 수 있음을 인지하고 있을 것
+6. 소셜 로그인 실 동작 확인 필요 — 로컬 `.env`에 실제 `VITE_GOOGLE_CLIENT_ID`/`VITE_KAKAO_JS_KEY`를 채운 뒤, 각 provider 콘솔에 허용 리다이렉트/JS 오리진으로 로컬 개발 주소(`http://localhost:5173` 등)가 등록돼있는지 확인 필요 (샌드박스는 네트워크 제약상 실제 SDK 호출까지는 검증 못 함)
+7. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
+8. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
 
 ## 결정 사항 히스토리
 

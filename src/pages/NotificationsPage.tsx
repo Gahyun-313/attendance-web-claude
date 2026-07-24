@@ -56,11 +56,13 @@ const NotificationsPage = () => {
   const handleCreate = (e: FormEvent) => {
     e.preventDefault()
     if (!form.title.trim() || !form.content.trim()) return
+    const scheduledAt = form.scheduledAt.trim() || null
     createMutation.mutate({
       title: form.title.trim(),
       content: form.content.trim(),
       targetGroup: form.target === '전체' ? null : form.target,
-      scheduledAt: form.scheduledAt.trim() || null,
+      sendType: scheduledAt ? 'SCHEDULED' : 'IMMEDIATE',
+      scheduledAt,
     })
     closeCreate()
   }

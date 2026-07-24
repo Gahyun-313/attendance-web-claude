@@ -23,11 +23,11 @@ export interface NfcTagRequest {
   location: string
 }
 
-// 태그 수정 요청 - NfcTagUpdateRequest DTO (등록용과 별도 클래스로 존재한다고 §7에 나와있어 uid 필드
-// 포함 여부가 불확실함. STEP16에서 사용자가 요청한 "UID 수정 가능"을 반영해 일단 같이 보내지만,
-// 백엔드가 이 필드를 무시하거나 검증 에러(400)를 낼 수 있어 실제 테스트로 확인 필요)
+// 태그 수정 요청 - NfcTagUpdateRequest DTO.
+// 2026-07-24 api-specification.md로 실제 필드 확인됨: name, description, location만 받음 - uid는 없음
+// (STEP16에서 "수정 화면에서 UID도 바꿀 수 있게" 요청받아 한때 uid를 같이 보냈었는데, 실제 백엔드는 이 값을
+// 받지 않아 무시되고 있었음 - STEP21에서 되돌림. UID는 등록(NfcTagRequest) 시에만 지정 가능)
 export interface NfcTagUpdateRequest {
-  uid: string
   name: string
   description?: string
   location: string
