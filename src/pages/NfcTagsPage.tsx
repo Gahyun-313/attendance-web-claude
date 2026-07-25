@@ -62,12 +62,13 @@ const NfcTagsPage = () => {
     return tags.filter((t) => statusFilter === 'ALL' || t.status === statusFilter)
   }, [tags, statusFilter])
 
-  // 목업의 통계 카드 4개는 실제 태그 목록 기준으로 계산 (오늘 인식 횟수는 별도 API가 없어서 여전히 정적 값)
+  // 앞 3개는 실제 태그 목록 기준 계산. "오늘 인식 횟수"는 대응 API가 없어서
+  // 2026-07-25에 목업 시드 값을 제거함(사용자 요청) - 지금은 '-'로 빈 상태 표시
   const statCards = [
     { label: '전체 태그', value: `${tags.length}개` },
     { label: '활성 태그', value: `${tags.filter((t) => t.status === 'ACTIVE').length}개` },
     { label: '비활성 태그', value: `${tags.filter((t) => t.status !== 'ACTIVE').length}개` },
-    { label: '오늘 인식 횟수', value: '24회' }, // TODO: 별도 통계 API 없음 - 필요해지면 백엔드에 요청
+    { label: '오늘 인식 횟수', value: '-' },
   ]
 
   // ACTIVE면 비활성화, 그 외(INACTIVE/LOST/DAMAGED)면 활성화 시도 - activate/deactivate API 2개만 있어서
@@ -152,7 +153,7 @@ const NfcTagsPage = () => {
 
   return (
     <>
-      {/* ===== UI: 통계 카드 4개 (전체/활성/비활성 태그 수는 실제 값, 오늘 인식 횟수는 아직 정적 값) ===== */}
+      {/* ===== UI: 통계 카드 4개 (전체/활성/비활성 태그 수는 실제 값, 오늘 인식 횟수는 대응 API 없어서 '-') ===== */}
       <div className="grid grid-cols-4 gap-4">
         {statCards.map((card) => (
           <Card key={card.label}>

@@ -1,186 +1,68 @@
 // 대시보드(홈) 화면. 오늘 하루의 세션/출석 현황을 통계 카드 + 차트 + 표로 요약해서 보여준다.
-// 아래 상수들은 전부 실제 API 연동 전까지 쓰는 정적 시드 데이터
-import { Badge, Card, Table } from '../components'
-import { attendanceStatusMeta } from '../utils/badgeColors'
+// 2026-07-25: 목업(Claude Design)의 시드 데이터를 전부 제거함(사용자 요청 - "프론트에서 임의로 만든 mock
+// 데이터 삭제"). 대응하는 백엔드 API(GET /api/statistics/dashboard 등)가 아직 없어서, 레이아웃은 그대로 두고
+// 전부 빈 상태(placeholder)로만 표시. 실제 API가 준비되면 각 섹션에 useQuery로 채워 넣으면 됨
+import { Card, Table } from '../components'
 import type { TableColumn } from '../components'
-import type { AttendanceStatus } from '../types/attendance'
 
-// TODO: 지금은 Claude Design 목업(Admin Web Page Mockups)의 시드 데이터를 그대로 씀.
-// 실제 연동은 GET /api/statistics/dashboard, GET /api/attendances/... 붙일 때(다음 STEP) 교체
-interface StatCard {
-  label: string
-  value: string
-  valueClassName?: string
-}
-
-const STAT_CARDS: StatCard[] = [
-  { label: '오늘 세션 수', value: '3건' },
-  { label: '진행 중인 세션', value: '1건', valueClassName: 'text-[oklch(42%_0.13_152)]' },
-  { label: '오늘 출석률', value: '82%' },
-  { label: '활성 사용자', value: '39명' },
-]
-
-interface HourlyBar {
-  hour: string
-  pct: number
-  peak?: boolean
-}
-
-// 09시~21시, 목업 시드 그대로
-const HOURLY_BARS: HourlyBar[] = [
-  { hour: '09', pct: 15 },
-  { hour: '10', pct: 8 },
-  { hour: '11', pct: 5 },
-  { hour: '12', pct: 10 },
-  { hour: '13', pct: 20 },
-  { hour: '14', pct: 85, peak: true },
-  { hour: '15', pct: 40 },
-  { hour: '16', pct: 12 },
-  { hour: '17', pct: 25 },
-  { hour: '18', pct: 35 },
-  { hour: '19', pct: 78, peak: true },
-  { hour: '20', pct: 55 },
-  { hour: '21', pct: 18 },
-]
-
-const STATUS_DISTRIBUTION = [
-  { label: '출석', pct: 68, color: 'oklch(55% 0.14 152)' },
-  { label: '지각', pct: 17, color: 'oklch(68% 0.15 70)' },
-  { label: '결석', pct: 15, color: 'oklch(58% 0.19 18)' },
-]
-
-const LIVE_SESSION = {
-  name: '백엔드 프로젝트 주간회의',
-  group: '개발1팀',
-  location: 'NFC-회의실2',
-  time: '10:00~11:00',
-  checkedIn: 3,
-  total: 8,
-}
-
+// 최근 출석 기록 표 - 실 데이터 없이 컬럼 정의만 유지 (emptyMessage로 빈 상태 표시)
 interface RecentCheck {
   name: string
   session: string
   time: string
-  status: AttendanceStatus
+  status: string
 }
-
-const RECENT_CHECKS: RecentCheck[] = [
-  { name: '이서준', session: '백엔드 프로젝트 주간회의', time: '10:02', status: 'PRESENT' },
-  { name: '박지훈', session: '백엔드 프로젝트 주간회의', time: '10:12', status: 'LATE' },
-  { name: '김민준', session: '백엔드 프로젝트 주간회의', time: '09:58', status: 'PRESENT' },
-  { name: '윤서아', session: '백엔드 프로젝트 주간회의', time: '10:00', status: 'PRESENT' },
-  { name: '이하윤', session: '알고리즘 스터디 8회차', time: '19:04(전일)', status: 'PRESENT' },
-]
 
 const recentChecksColumns: TableColumn<RecentCheck>[] = [
   { key: 'name', header: '이름' },
   { key: 'session', header: '세션' },
   { key: 'time', header: '시간' },
-  {
-    key: 'status',
-    header: '상태',
-    render: (row) => {
-      const meta = attendanceStatusMeta[row.status]
-      return <Badge color={meta.color}>{meta.label}</Badge>
-    },
-  },
+  { key: 'status', header: '상태' },
 ]
 
-// conic-gradient 도넛 - 출석/지각/결석 순으로 누적 퍼센트 지점을 이어붙임
-const donutStops = (() => {
-  let acc = 0
-  return STATUS_DISTRIBUTION.map((s) => {
-    const from = acc
-    acc += s.pct
-    return `${s.color} ${from}% ${acc}%`
-  }).join(', ')
-})()
+const STAT_LABELS = ['오늘 세션 수', '진행 중인 세션', '오늘 출석률', '활성 사용자']
 
 const DashboardPage = () => {
   return (
     <>
-      {/* ===== UI: 통계 카드 4개 (오늘 세션 수/진행중/출석률/활성 사용자) ===== */}
+      {/* ===== UI: 통계 카드 4개 - 대응 API가 없어서 전부 '-' ===== */}
       <div className="grid grid-cols-4 gap-4">
-        {STAT_CARDS.map((card) => (
-          <Card key={card.label}>
-            <p className="text-[12.5px] font-medium text-[#8a8f98]">{card.label}</p>
-            <p className={`mt-1 text-[26px] font-bold ${card.valueClassName ?? 'text-[#1c1e21]'}`}>{card.value}</p>
+        {STAT_LABELS.map((label) => (
+          <Card key={label}>
+            <p className="text-[12.5px] font-medium text-[#8a8f98]">{label}</p>
+            <p className="mt-1 text-[26px] font-bold text-[#1c1e21]">-</p>
           </Card>
         ))}
       </div>
 
-      {/* ===== UI: 시간대별 바 차트 + 상태 분포 도넛 차트 ===== */}
+      {/* ===== UI: 시간대별 바 차트 + 상태 분포 도넛 차트 - 데이터 없어서 빈 상태 문구만 표시 ===== */}
       <div className="grid grid-cols-[1.5fr_1fr] gap-4">
-        {/* ----- UI: 시간대별 출석 체크 추이 (09~21시 CSS 바 차트, 높이는 HOURLY_BARS.pct%) ----- */}
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">시간대별 출석 체크 추이</p>
           <p className="mb-4 text-xs text-[#9aa1ac]">오늘, 09시~21시</p>
-          <div className="flex h-[120px] items-end gap-1.5">
-            {HOURLY_BARS.map((bar) => (
-              <div key={bar.hour} className="flex flex-1 flex-col items-center gap-1.5">
-                <div
-                  className="w-full rounded-t"
-                  style={{
-                    height: `${bar.pct}%`,
-                    backgroundColor: `oklch(55% 0.16 258 / ${bar.peak ? 0.9 : 0.85})`,
-                  }}
-                />
-                <span className="text-[10.5px] text-[#9aa1ac]">{bar.hour}</span>
-              </div>
-            ))}
-          </div>
+          <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
         </Card>
 
-        {/* ----- UI: 출석 상태 분포 도넛 (conic-gradient로 그림, donutStops가 각 구간 각도를 계산) ----- */}
         <Card>
           <p className="mb-4 text-sm font-bold text-[#1c1e21]">오늘 출석 상태 분포</p>
-          <div className="flex items-center justify-center">
-            <div
-              className="relative flex size-[110px] items-center justify-center rounded-full"
-              style={{ background: `conic-gradient(${donutStops})` }}
-            >
-              <div className="flex size-[70px] items-center justify-center rounded-full bg-white text-[17px] font-bold text-[#1c1e21]">
-                82%
-              </div>
-            </div>
-          </div>
-          {/* ----- UI: 도넛 아래 범례(출석/지각/결석 %) ----- */}
-          <div className="mt-4 flex justify-center gap-4">
-            {STATUS_DISTRIBUTION.map((s) => (
-              <div key={s.label} className="flex items-center gap-1.5 text-xs text-[#6b7280]">
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                {s.label} {s.pct}%
-              </div>
-            ))}
-          </div>
+          <div className="flex h-[110px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
         </Card>
       </div>
 
-      {/* ===== UI: 진행 중인 세션 카드 + 최근 출석 기록 표 ===== */}
+      {/* ===== UI: 진행 중인 세션 카드 + 최근 출석 기록 표 - 데이터 없어서 빈 상태 문구만 표시 ===== */}
       <div className="grid grid-cols-[1fr_1.3fr] gap-4">
-        {/* ----- UI: 진행 중인 세션 - 초록 점은 index.css의 @keyframes livePulse로 깜빡임 ----- */}
         <Card title="진행 중인 세션">
-          <div className="rounded-[10px] border border-[#eceef1] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#1c1e21]">{LIVE_SESSION.name}</p>
-                <p className="mt-1 text-xs text-[#9aa1ac]">
-                  {LIVE_SESSION.group} · {LIVE_SESSION.location} · {LIVE_SESSION.time}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-medium text-[oklch(42%_0.13_152)]">
-                <span className="size-2 animate-[livePulse_1.6s_infinite] rounded-full bg-[#22c55e]" />
-                진행중 · {LIVE_SESSION.checkedIn}/{LIVE_SESSION.total}명
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-[#9aa1ac]">진행 중인 세션이 없습니다.</p>
         </Card>
 
-        {/* ----- UI: 최근 출석 기록 - Table 컴포넌트가 카드 프레임을 겸해서 별도 Card로 안 감쌈 ----- */}
         <div>
           <p className="mb-3 text-sm font-bold text-[#1c1e21]">최근 출석 기록</p>
-          <Table columns={recentChecksColumns} data={RECENT_CHECKS} rowKey={(row) => `${row.name}-${row.time}`} />
+          <Table
+            columns={recentChecksColumns}
+            data={[] as RecentCheck[]}
+            rowKey={(row) => `${row.name}-${row.time}`}
+            emptyMessage="데이터가 없습니다."
+          />
         </div>
       </div>
     </>

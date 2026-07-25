@@ -78,13 +78,13 @@ const UsersPage = () => {
     return users.filter((u) => statusFilter === '활성/비활성 전체' || (statusFilter === '활성' ? u.active : !u.active))
   }, [users, statusFilter])
 
-  // 대시보드 상단 4개 통계 카드는 목업에서도 users 배열이 아니라 정적 값이라 그대로 둠
-  // TODO: 실제로는 GET /api/users/dashboard로 교체 (지금은 §9 기준 미완료 상태라 MSW mock 사용중, main.tsx/handlers.ts 참고)
+  // 전체/활성 사용자 수는 실제 목록 기준 계산. 평균 출석률/이번 달 신규는 대응 API(GET /api/users/dashboard)가
+  // 없어서 2026-07-25에 목업 시드 값을 제거함(사용자 요청) - 지금은 '-'로 빈 상태 표시
   const statCards = [
     { label: '전체 사용자', value: `${users.length}명` },
     { label: '활성 사용자', value: `${users.filter((u) => u.active).length}명` },
-    { label: '평균 출석률', value: '87%' },
-    { label: '이번 달 신규', value: '5명' },
+    { label: '평균 출석률', value: '-' },
+    { label: '이번 달 신규', value: '-' },
   ]
 
   const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
@@ -161,7 +161,7 @@ const UsersPage = () => {
 
   return (
     <>
-      {/* ===== UI: 통계 카드 4개 (전체/활성 사용자는 실제 값, 평균 출석률/이번 달 신규는 아직 정적 값) ===== */}
+      {/* ===== UI: 통계 카드 4개 (전체/활성 사용자는 실제 값, 평균 출석률/이번 달 신규는 대응 API 없어서 '-') ===== */}
       <div className="grid grid-cols-4 gap-4">
         {statCards.map((card) => (
           <Card key={card.label}>
