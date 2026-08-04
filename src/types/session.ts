@@ -19,7 +19,8 @@ export interface Session {
   nfcTagId: number | null
 }
 
-// 세션 생성/수정 요청 바디 - SessionRequest DTO 추정 (컨벤션상 toEntity() 메서드를 가진 Request 클래스)
+// 세션 생성/수정 요청 바디 - SessionRequest DTO. 2026-08-05: api-specification.md(#8 수정본)로
+// 필드 구성(nfcTagId 포함)이 실제로 맞다고 확정됨 (더 이상 추정 아님). 응답 쪽 nfcTag 표시 필드명만 아직 미확인
 export interface SessionRequest {
   title: string
   description: string

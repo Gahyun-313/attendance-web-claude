@@ -313,16 +313,43 @@ src/
   - **안 건드린 것들**: `src/mocks/handlers.ts`의 MSW mock 4종(설정 조직정보/출석정책 GET·PUT, 사용자 대시보드) — 사용자가 유지하기로 결정, 설정 화면(STEP24)이 여기 의존. `SessionsPage`의 "출석률" 컬럼은 원래도 가짜 숫자가 아니라 `'-'` placeholder였어서 그대로 둠
   - `npx tsc --noEmit` 클린 확인
 
+- STEP 27 (2026-08-05, 완료): 사용자가 갱신한 BE 문서(`docs_be/api-specification.md` #8 수정본, `multi-tenancy-plan.md`, `attendance-project-context.md`) 재검토 + "다음 작업" 전체 재정리, BE에서 해줘야 하는 것 별도 분류(사용자 요청). 브랜치 `docs/step27-be-docs-review`
+  - **해결 확인**: NFC 태그/출석 기록 organizationId 필터링(STEP22 known-limitation)이 2026-08-05 백엔드에서 완전히 해결됨(`feat/nfc-tag-org-filter`) - 다음 작업 목록에서 제거
+  - **확정으로 정정**: 세션 목록 검색 파라미터 `keyword`, 세션 생성/수정 요청의 `nfcTagId` 필드 - 둘 다 "추정"이었던 걸 공식 문서로 확정 처리(`api/sessions.ts`, `types/session.ts` 주석만 수정, 동작 변경 없음)
+  - **새로 알게 된 것**: `PATCH /api/users/me/password`(비밀번호 변경) API가 실제로 존재함 - 설정 화면에 추가 가능. `GET /api/statistics/dashboard`에 "최근 완료 세션 5개 평균 출석률"이 실제로 포함됨(세션별 막대 6개가 아니라 단일 값) - STEP25에서 비워둔 통계 카드를 채울 수 있음. 둘 다 아직 구현은 안 함(정리만) - 다음에 진행 여부 확인 필요
+  - `npx tsc --noEmit` 클린 확인 (동작 변경 없는 주석/문서 정리 위주라 리스크 낮음)
+  - **보안 이슈 발견 및 조치 (같은 날 이어서)**: `docs_be/` 커밋 직후 "퍼블릭으로 올릴 때 문제없는지 확인해줘" 요청으로 전체 추적 파일을 스캔한 결과, `docs_be/attendance-project-context.md`에 실제 EC2 퍼블릭 IP(`43.201.20.36`, 4곳)와 실제 RDS 엔드포인트(`attendance-db.cn00oikqi6n2.ap-northeast-2.rds.amazonaws.com`, 1곳), 이미 교체된 JWT_SECRET 예시값(1곳)이 그대로 들어있던 걸 발견함. 다행히 `origin/develop`엔 아직 안 올라간 로컬 전용 커밋이라 `filter-branch` 없이 바로 조치 가능했음
+    - **조치**: `docs_be/` 디렉터리 전체를 리포에서 삭제하고 `.gitignore`에 `docs_be/` 추가 (BE 참고 문서는 로컬에만 두고 이 프론트 리포엔 아예 커밋하지 않는 방향으로 결정 - 사용자 요청)
+    - `.env`는 원래부터 gitignore돼있어서 문제없었고, AWS 키/DB 비밀번호/Google·Kakao 클라이언트 시크릿/개인키 파일 등은 스캔 결과 안 나옴 - 이번 건이 유일한 발견 사항
+    - 로컬 develop이 origin보다 1커밋 앞선 상태(바로 이 STEP27 커밋)라 `git commit --amend`로 해당 커밋 자체에서 docs_be를 빼는 방식으로 정리 - 즉 docs_be가 존재했던 커밋이 아예 히스토리에 안 남음
+
 ## 다음 작업
 
-1. STEP19~21에서도 여전히 추정으로 남아있는 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
-2. ~~설정 화면~~ → STEP24(2026-07-25)에서 UI 구현 완료(MSW mock 연동). 실제 백엔드 설정 API가 나오면 `api/settings.ts`/`types/settings.ts`만 실제 응답 모양에 맞춰 조정하면 됨. 관리자 계정(비밀번호 변경) 설정은 여전히 미구현
-3. ~~`axiosClient.ts`의 401 응답 인터셉터~~ → STEP23(2026-07-25)에서 구현 완료. 다만 실제 Access Token 만료(1시간) 상황에서의 갱신+재시도 흐름은 아직 실사용 테스트 안 됨 - 로그인 후 1시간 넘게 켜두고 요청 날려서 실제로 갱신되는지 확인 권장
-4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 대시보드 화면 전체, 사용자·NFC 관리 통계 카드 일부는 대응하는 백엔드 API가 없어서 STEP25(2026-07-25)부터 빈 상태(`-`/"데이터가 없습니다")로 표시 중 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청
-5. **NFC 태그/출석 기록 API의 organizationId 필터링 누락(STEP22 참고)** — 백엔드에서 고쳐지면 알려주기로 함. 그 전까지 다른 단체가 실제로 생기면 문제가 드러날 수 있음을 인지하고 있을 것
-6. ~~소셜 로그인 실 동작 확인~~ → STEP22 후속 확인(2026-07-25)에서 구글/카카오 둘 다 실제 로그인 성공 확인 완료. 배포(EC2) 도메인으로 소셜 로그인 쓸 계획이면, 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 동일하게 등록 필요
-7. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
-8. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
+> 2026-08-05: 사용자가 BE 쪽 문서(`docs_be/api-specification.md` #8 수정본, `multi-tenancy-plan.md`, `attendance-project-context.md`)를 갱신해서 전체를 다시 검토하고 재정리함. 아래는 카테고리별로 나눔.
+
+**완전히 해결돼서 지운 항목**
+- ~~NFC 태그/출석 기록 API의 organizationId 필터링 누락~~ → **2026-08-05 백엔드에서 전부 해결 확인** (`multi-tenancy-plan.md` §8, 브랜치 `feat/nfc-tag-org-filter`). `NfcTag` 엔티티에 organizationId 컬럼 추가 + 스키마 마이그레이션까지 완료, 이제 User/Session/Attendance/Statistics/NFC 전 도메인이 단체별로 격리됨. 프론트가 추가로 할 일 없음(원래도 JWT만 보내면 서버가 자동 필터링하는 구조였음)
+- ~~세션명 검색 파라미터명 추정(`keyword`)~~ → `api-specification.md`(#8)로 `status, keyword, page, size`가 실제 파라미터명으로 확정됨. 이미 그렇게 구현돼 있어서 코드 변경 없음
+- ~~세션 생성/수정 요청의 NFC 태그 참조 필드명 추정~~ → 같은 문서로 `nfcTagId`가 맞다고 확정됨(이미 그렇게 구현돼 있음). 다만 **응답 쪽** 표시용 필드명(현재 `nfcTagName`으로 추정 중인 것)은 여전히 미확인
+
+**프론트에서 바로 진행 가능 (BE가 이미 API 제공, 아직 프론트가 안 씀)**
+1. 관리자 비밀번호 변경 — `PATCH /api/users/me/password`(currentPassword, newPassword) 확인됨. 설정 화면(STEP24)에 "계정" 섹션으로 추가 가능
+2. 통계 화면 "최근 완료 세션 평균 출석률" — `GET /api/statistics/dashboard` 응답에 실제로 포함되는 값으로 확인됨(`attendance-project-context.md` "최근 완료 세션 **5개** 평균 출석률" - 세션별 막대 6개가 아니라 **단일 숫자**). STEP25에서 빈 상태로 비워둔 카드를 단일 값으로 다시 채울 수 있음 - 다만 정확한 JSON 필드명은 미확인이라 optional 처리 필요
+3. `DashboardPage.tsx` 일부 카드 — 같은 `GET /api/statistics/dashboard`가 "오늘 세션 수" 등도 포함한다고 문서에 명시돼있어 복구 가능성 있음. 정확한 필드명 미확인이라 실제 응답 확인 후 진행 권장(무턱대고 추정 필드명 그대로 쓰면 조용히 `undefined`가 나올 수 있음)
+
+**BE에서 해줘야(만들어줘야) 하는 것 — 아직 없는 API**
+1. 비밀번호 찾기/재설정(로그아웃 상태에서) — 새로 확인된 `PATCH /api/users/me/password`는 로그인된 본인 전용이라 로그인 화면의 "비밀번호를 잊으셨나요?"엔 못 씀. 별도 엔드포인트 필요
+2. 사용자 재활성화 — `DELETE /api/users/{userId}`(soft delete)만 있고 되돌리는 API가 없음
+3. 설정 API(조직 정보/출석 정책 GET·PUT 4종) — 여전히 명세에 없음, 계속 MSW mock으로만 동작 중
+4. `GET /api/users/dashboard`(사용자 목록 상단 요약 통계) — 여전히 명세에 없음
+5. 출석률 상위/하위 사용자 랭킹용 목록형 통계 API — 개별 사용자 조회(`GET /statistics/users/{id}`)만 있고 전체를 한 번에 주는 API가 없어서 랭킹을 못 뽑음
+6. **(구현이 아니라 확인 요청)** `SessionResponse`/`AttendanceResponse`/`DashboardStatisticsResponse`의 정확한 JSON 필드명 — 명세서엔 요청 필드는 상세히 나와있는데 응답 DTO는 필드 단위로 안 나와있음. 실제 응답 예시(JSON) 하나씩만 공유해줘도 프론트 코드에 남아있는 "추정" 주석들을 다 없앨 수 있음
+
+**기타 (계속 유지)**
+- Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
+- 배포 도메인으로 소셜 로그인 쓸 계획이면 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 등록 필요
+- 로컬 전용이라 여기서 확인 불가: 실제 `npm run build` 최종 검증, ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단)
+- 로컬에 실제 git 저장소가 있으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
 
 ## 결정 사항 히스토리
 
