@@ -1,12 +1,13 @@
 // 출석 세션 API. attendance-project-context.md §9 "출석 세션 API" 기준.
-// 서버 응답(SessionResponse)의 정확한 JSON 필드명은 문서에 없어서, 여기 mapSession() 한 곳에서만
-// 서버 응답 -> 화면이 쓰는 Session 뷰 모델로 변환한다. 실제 응답을 보고 필드명이 다르면 이 함수만 고치면 됨
+// 서버 응답(SessionResponse)의 JSON 필드명은 2026-08-20 SessionResponse.java 소스로 확정됨. mapSession()
+// 한 곳에서만 서버 응답 -> 화면이 쓰는 Session 뷰 모델로 변환한다 (필드명이 나중에 또 바뀌면 이 함수만 고치면 됨)
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
 import type { Session, SessionRequest, SessionStatus } from '../types/session'
 import { unwrapListPayload } from '../utils/pageResponse'
 
-// 백엔드 SessionResponse 추정 형태 (엔티티 §8 기준)
+// 백엔드 SessionResponse (2026-08-20 소스로 확정). NFC 태그는 nfcTagId/nfcTagName 평면 필드가 아니라
+// nfcTag 중첩 객체(연결 안 됐으면 null)로 내려옴 - 예전엔 평면 필드로 잘못 추정해서 항상 '-'로만 보였던 버그였음
 interface SessionResponseDto {
   id: number
   title: string
@@ -18,9 +19,8 @@ interface SessionResponseDto {
   lateThresholdMinutes: number
   location: string
   status: SessionStatus
+  nfcTag: { id: number; uid: string; name: string; location: string } | null
   note: string
-  nfcTagId?: number | null
-  nfcTagName?: string | null // TODO: 실제 필드명 미확인 (nfcTag 객체로 내려올 수도 있음)
 }
 
 const mapSession = (dto: SessionResponseDto): Session => ({
@@ -29,14 +29,14 @@ const mapSession = (dto: SessionResponseDto): Session => ({
   group: dto.groupName,
   date: dto.sessionDate,
   time: `${dto.startTime}–${dto.endTime}`,
-  tag: dto.nfcTagName ?? '-',
+  tag: dto.nfcTag?.name ?? '-',
   rate: '-', // 목록 API엔 출석률이 없음 (TODO: 상세에서 출석 대시보드 API로 보강)
   status: dto.status,
   desc: dto.description,
   location: dto.location,
   lateThreshold: `시작 후 ${dto.lateThresholdMinutes}분`,
   note: dto.note,
-  nfcTagId: dto.nfcTagId ?? null,
+  nfcTagId: dto.nfcTag?.id ?? null,
 })
 
 export interface ListSessionsParams {

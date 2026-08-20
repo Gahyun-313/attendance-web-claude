@@ -1,7 +1,9 @@
 // 통계 화면. 2026-07-23(STEP19): 상단 통계 카드 4개 + 그룹별 출석률은 실제 통계 API(GET /api/statistics/overall,
 // /dashboard)로 연동.
 // 2026-08-19(STEP29-4): "출석률 상위/하위 사용자"를 BE 신규 API(GET /api/statistics/ranking)로 연동함.
-// "최근 완료 세션 평균"은 여전히 대응 API가 없어서(CONTEXT.md §다음 작업 7번 참고, dashboard 응답 필드명 미확인) 빈 상태 유지
+// 2026-08-20(STEP30): DashboardStatisticsResponse.java 소스로 필드명 확정 - "그룹별 출석률" 카드가 groupRates라는
+// 잘못된 필드명을 읽고 있어서 지금까지 실제로는 데이터를 한 번도 못 받아온 버그를 수정(groupAttendanceRates가 맞음).
+// "최근 완료 세션 평균"도 recentAttendanceRate 필드로 실제 연동함(단일 숫자 - 세션별 막대그래프 아님)
 import { useQuery } from '@tanstack/react-query'
 import { Card } from '../components'
 import { getAttendanceRanking, getDashboardStatistics, getOverallStatistics } from '../api/statistics'
@@ -15,7 +17,8 @@ const StatisticsPage = () => {
   const dashboardQuery = useQuery({ queryKey: ['statisticsDashboard'], queryFn: getDashboardStatistics })
   const rankingQuery = useQuery({ queryKey: ['statisticsRanking'], queryFn: () => getAttendanceRanking(5) })
   const overall = overallQuery.data
-  const groupRates = dashboardQuery.data?.groupRates ?? []
+  const groupRates = dashboardQuery.data?.groupAttendanceRates ?? []
+  const recentAttendanceRate = dashboardQuery.data?.recentAttendanceRate
   const topRanking = rankingQuery.data?.topRanking ?? []
   const bottomRanking = rankingQuery.data?.bottomRanking ?? []
 
@@ -80,11 +83,17 @@ const StatisticsPage = () => {
           </div>
         </Card>
 
-        {/* ----- UI: 최근 완료 세션 평균 출석률 - 전용 API가 없어서 빈 상태 ----- */}
+        {/* ----- UI: 최근 완료 세션 평균 출석률 - GET /api/statistics/dashboard의 recentAttendanceRate (STEP30) ----- */}
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">최근 완료 세션 평균 출석률</p>
-          <p className="mb-4 text-xs text-[#8a8f98]">최근 6회차</p>
-          <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          <p className="mb-4 text-xs text-[#8a8f98]">최근 완료된 세션 5개 기준</p>
+          {recentAttendanceRate !== undefined ? (
+            <div className="flex h-[120px] items-center justify-center">
+              <p className="text-[32px] font-bold text-[#1c1e21]">{recentAttendanceRate.toFixed(1)}%</p>
+            </div>
+          ) : (
+            <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          )}
         </Card>
       </div>
 

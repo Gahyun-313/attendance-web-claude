@@ -93,14 +93,14 @@ src/
 | 화면 | 상태 |
 |---|---|
 | 로그인 | ✅ 완료 (아이디/비밀번호 + 구글/카카오 소셜 로그인·가입 전부 실 연동 검증됨, 2026-07-25) |
-| 대시보드 | 🟡 레이아웃만 완료, 전부 빈 상태(placeholder) — 2026-07-25 시드 데이터 삭제, 대응 API 없음 |
-| 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작) |
+| 대시보드 | 🟡 카드4개 중 오늘세션수/진행중인세션 2개만 실 API 연동(STEP30), 나머지(오늘출석률/활성사용자/차트/진행세션목록/최근출석표)는 대응 API 없어 빈 상태 |
+| 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작, NFC태그 표시 버그 STEP30에서 수정) |
 | 출석 현황 | ✅ 완료 (필터 + 상태 수정 모달 동작) |
 | 사용자 관리 | ✅ 완료 (필터/검색 + 생성·상세·수정 모달 전부 동작) |
 | NFC 태그 관리 | ✅ 완료 (필터 + 등록·수정 모달 + 활성/비활성 토글 전부 동작) |
-| 통계 | 🟡 카드4개/그룹별출석률은 실 API 연동, 나머지 2개 섹션은 빈 상태 — 2026-07-25 시드 데이터 삭제 |
+| 통계 | 🟡 카드4개/그룹별출석률(STEP30에서 필드명 버그 수정)/최근완료세션평균(STEP30 신규)/랭킹까지 실 API 연동, 대응 API 없는 섹션 없음 |
 | 알림 관리 | ✅ 완료 (필터 + 생성·상세 모달 + 발송취소 전부 동작) |
-| 설정 | 🟡 UI 구현 완료, MSW mock에만 연동 (백엔드 API 자체가 아직 없어서 실서버 연동은 보류) |
+| 설정 | ✅ 완료 (단체정보·출석정책 GET/PUT /organizations/me + 계정 비밀번호 변경 PATCH /users/me/password, STEP30) |
 
 ## 진행 상황
 
@@ -335,15 +335,17 @@ src/
   - **STEP29-5 설정 화면 전면 교체**: `types/settings.ts`/`api/settings.ts`/`SettingsPage.tsx` 전부 다시 작성 - 기존 mock 기준 조직정보/출석정책 2개 카드 구조를 실제 API(`GET/PUT /organizations/me`) 기준 단일 카드로 통합. `contactEmail` 필드 제거, 읽기전용 `단체 코드` 표시 추가. `mocks/handlers.ts`의 4개 mock 핸들러(users/dashboard, settings 조직/정책 2종) 전부 제거하고 빈 배열로 정리 - MSW 인프라(`browser.ts`/`main.tsx`)는 나중을 위해 그대로 유지
   - `npx tsc --noEmit` 클린 확인 (STEP29-2 LoginPage.tsx 대규모 JSX 변경 직후, STEP29-4/5 완료 후 총 2회 확인)
 
+- STEP30 (2026-08-20, 완료): 사용자가 BE `DashboardStatisticsResponse.java`/`SessionResponse.java`/`AttendanceResponse.java` 실제 소스를 공유해줘서 STEP27 §다음 작업 1~4번을 전부 마무리함(기존에 "신규 기능"으로만 생각했던 2번이 실제로는 버그 수정이었음). 사용자 확인: 이 웹은 포트폴리오용이 아니라 백엔드 검증/시현용이라 과설계 없이 필요한 만큼만 진행, 한 브랜치로 묶어서 커밋. 브랜치 `feat/step30-account-and-response-field-fixes`
+  - **STEP30-1 버그 수정 - 그룹별 출석률**: `types/statistics.ts`의 `DashboardStatistics.groupRates` 필드명이 실제 응답(`groupAttendanceRates`)과 달라서 `StatisticsPage.tsx`의 "그룹별 출석률" 카드가 지금까지 데이터를 한 번도 못 받아온 것으로 보임(STEP19/25엔 "실 API 연동"으로 기록돼 있었으나 실제로는 항상 `undefined`였을 가능성) - 필드명을 `groupAttendanceRates`로 수정
+  - **STEP30-2 버그 수정 - 세션 NFC 태그 표시**: `api/sessions.ts`의 `SessionResponseDto`가 `nfcTagId`/`nfcTagName` 평면 필드로 추정하고 있었는데 실제 `SessionResponse`는 `nfcTag: {id, uid, name, location} | null` 중첩 객체로 내려옴 - 세션 목록의 "NFC태그" 컬럼과 수정 모달 프리필이 항상 비어 보였을 것으로 추정, `mapSession()`을 중첩 객체 기준으로 수정
+  - **STEP30-3 관리자 비밀번호 변경**: `types/user.ts`에 `PasswordChangeRequest` 추가, `api/users.ts`에 `changePassword()` 추가(`PATCH /api/users/me/password`, U005=비밀번호 불일치). `SettingsPage.tsx`에 "계정" 카드 신규 추가(현재/새/새 비밀번호 확인 3개 입력 - 새 비밀번호 확인은 클라이언트에서만 일치 검증, 서버 에러 메시지는 `LoginPage.tsx`의 `extractError()`와 동일한 패턴으로 표시)
+  - **STEP30-4 통계/대시보드 카드 연동**: `types/statistics.ts`의 `DashboardStatistics`를 실제 필드(`todaySessionCount`/`activeSessionCount`/`recentAttendanceRate`/`groupAttendanceRates`)로 재정의 - 기존 추정 필드였던 `todayAttendanceRate`/`activeUserCount`는 이 DTO에 아예 없는 것으로 확인돼 제거. `StatisticsPage.tsx`의 "최근 완료 세션 평균 출석률" 카드를 `recentAttendanceRate`로 채움(STEP25에서 비워둔 카드). `DashboardPage.tsx`에 `getDashboardStatistics()` 연동 추가 - 통계 카드 4개 중 "오늘 세션 수"/"진행 중인 세션" 2개만 실 데이터로 채워짐(`todaySessionCount`/`activeSessionCount`), "오늘 출석률"/"활성 사용자"는 이 DTO에 대응 필드가 없어 계속 `-`로 남김(시간대별 차트/상태분포 도넛/진행중 세션 목록/최근 출석 표도 여전히 대응 API 없어 빈 상태 유지) - 두 화면이 같은 `queryKey`(`statisticsDashboard`)를 써서 캐시 공유
+  - **STEP30-5 주석 정리**: `types/session.ts`/`types/attendance.ts`/`api/statistics.ts`의 "추정" 주석을 실제 소스 확인 결과로 교체 - `AttendanceResponse`는 기존 추정(userName/studentId/groupName/checkInTime/nfcLocation/modifiedBy/note)이 전부 정확했던 것으로 확인(버그 없음)
+  - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요(샌드박스엔 `node_modules` 없음) - 변경 파일 목록: `types/user.ts`, `types/statistics.ts`, `types/session.ts`, `types/attendance.ts`, `api/users.ts`, `api/statistics.ts`, `api/sessions.ts`, `api/attendances.ts`, `pages/SettingsPage.tsx`, `pages/StatisticsPage.tsx`, `pages/DashboardPage.tsx`
+
 ## 다음 작업
 
-> 2026-08-19: STEP29에서 BE 신규 API 5종(사용자 재활성화/비밀번호 재설정/사용자 대시보드/출석률 랭킹/단체정보·출석정책 설정)을 전부 구현 완료함. 남은 항목은 STEP27부터 이어져온 것들과 상시 확인 사항뿐.
-
-**확인된 것 (STEP27, 2026-08-05 - 아직 미착수)**
-1. 관리자 비밀번호 변경(로그인된 본인 전용, STEP29-2의 "비밀번호 재설정"과는 다른 기능) — `PATCH /api/users/me/password`(currentPassword, newPassword). 설정 화면에 "계정" 섹션으로 추가 가능
-2. 통계 화면 "최근 완료 세션 평균 출석률" — `GET /api/statistics/dashboard` 응답에 포함(세션별 막대 6개 아니라 **단일 숫자**, "최근 완료 세션 5개 평균"). STEP25에서 비워둔 카드를 채울 수 있음 - 정확한 JSON 필드명 미확인이라 optional 처리 필요
-3. `DashboardPage.tsx` 일부 카드 — 같은 `GET /api/statistics/dashboard`에 "오늘 세션 수" 등도 포함된다고 문서에 명시됨. 필드명 미확인이라 실제 응답 확인 후 진행 권장
-4. **(구현 아니고 확인 요청)** `SessionResponse`/`AttendanceResponse`/`DashboardStatisticsResponse`의 정확한 JSON 필드명 — 응답 예시(JSON) 공유받으면 프론트에 남은 "추정" 주석을 다 없앨 수 있음
+> 2026-08-20: STEP30에서 STEP27 §다음 작업 1~4번(비밀번호 변경/통계·대시보드 카드/필드명 확인)을 전부 마무리함. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
