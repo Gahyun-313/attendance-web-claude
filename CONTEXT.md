@@ -323,27 +323,27 @@ src/
     - `.env`는 원래부터 gitignore돼있어서 문제없었고, AWS 키/DB 비밀번호/Google·Kakao 클라이언트 시크릿/개인키 파일 등은 스캔 결과 안 나옴 - 이번 건이 유일한 발견 사항
     - 로컬 develop이 origin보다 1커밋 앞선 상태(바로 이 STEP27 커밋)라 `git commit --amend`로 해당 커밋 자체에서 docs_be를 빼는 방식으로 정리 - 즉 docs_be가 존재했던 커밋이 아예 히스토리에 안 남음
 
+- STEP 28 (2026-08-18, 접수만 완료 - 구현은 다음 채팅): 사용자가 BE 신규 API 5종 공지 문서를 전달함. STEP27에서 "BE에서 해줘야 하는 것"으로 분류했던 5개 항목이 **전부 이 공지로 해결됨**. 아직 프론트 구현은 시작 안 함 - 다음 채팅에서 이어감(§다음 작업 참고)
+  - 서버 상태: `http://43.201.20.36:8080`, 오전 배포 이슈(로그인 전체 실패 `ETIMEDOUT`) 해결 완료, 비밀번호/카카오/구글 로그인 전부 정상 확인됨(2026-08-18). 도메인/HTTPS는 아직 미적용 (IP+포트 직접 연결 상태, Nginx는 다음 순서)
+  - 5개 API 전부 공통: `Authorization: Bearer {accessToken}` 필요, **ADMIN 전용**(STUDENT 토큰이면 403). 토큰 발급/갱신은 기존 `/api/auth/login`, `/api/auth/oauth/{provider}`, `/api/auth/refresh` 그대로(변경 없음)
+
+- STEP 29 (2026-08-19, 완료): STEP28에서 접수만 해둔 BE 신규 API 5종을 전부 구현 (사용자가 "커밋까지 작업해줘"로 같은 채팅에서 이어서 진행 요청). 브랜치 `feat/step29-new-be-apis`
+  - **STEP29-1 사용자 재활성화**: `api/users.ts`에 `activateUser(id)` 추가(`POST /users/:id/activate`). `UsersPage.tsx`의 액션 컬럼이 `row.active` 값에 따라 비활성화/활성화 버튼을 조건부로 보여주도록 수정
+  - **STEP29-2 비밀번호 재설정(로그아웃 상태용, 2단계)**: `types/auth.ts`에 `PasswordResetRequest`/`PasswordResetVerifyRequest` 추가, `api/auth.ts`에 `requestPasswordReset`/`verifyPasswordReset` 추가. `LoginPage.tsx`의 비활성화돼있던 "비밀번호를 잊으셨나요?" 링크를 실제 동작하는 버튼으로 바꾸고, 로그인 폼 영역을 `resetStep`(`null`/`'request'`/`'verify'`) 3단 조건부 렌더링으로 재구성 - 이메일 입력→코드 발송, 코드+새 비밀번호 입력→재설정, 완료 후 로그인 폼으로 복귀 + 성공 배너 표시. 재설정 성공해도 자동 로그인 안 되는 서버 스펙 그대로 반영(로그인 폼으로 돌려보내기만 함)
+  - **STEP29-3 사용자 대시보드**: `api/users.ts`에 `getUserDashboard()`/`UserDashboardSummary` 추가(`GET /users/dashboard`, 필드명 `activateUsers` 그대로 - 오타 아님). `UsersPage.tsx` 통계카드의 "평균 출석률"/"이번 달 신규"(STEP25에서 `-`로 비워둔 것)를 실제 값으로 교체
+  - **STEP29-4 출석률 랭킹**: `types/statistics.ts`에 `AttendanceRankingEntry`/`AttendanceRanking` 추가, `api/statistics.ts`에 `getAttendanceRanking(limit=5)` 추가(`GET /statistics/ranking`). `StatisticsPage.tsx`의 "출석률 상위/하위 사용자"(STEP25에서 빈 상태로 비워둔 것)를 실제 리스트로 교체, 하위 리스트는 기존 `isLow()` 헬퍼로 80% 미만 빨간색 표시 유지
+  - **STEP29-5 설정 화면 전면 교체**: `types/settings.ts`/`api/settings.ts`/`SettingsPage.tsx` 전부 다시 작성 - 기존 mock 기준 조직정보/출석정책 2개 카드 구조를 실제 API(`GET/PUT /organizations/me`) 기준 단일 카드로 통합. `contactEmail` 필드 제거, 읽기전용 `단체 코드` 표시 추가. `mocks/handlers.ts`의 4개 mock 핸들러(users/dashboard, settings 조직/정책 2종) 전부 제거하고 빈 배열로 정리 - MSW 인프라(`browser.ts`/`main.tsx`)는 나중을 위해 그대로 유지
+  - `npx tsc --noEmit` 클린 확인 (STEP29-2 LoginPage.tsx 대규모 JSX 변경 직후, STEP29-4/5 완료 후 총 2회 확인)
+
 ## 다음 작업
 
-> 2026-08-05: 사용자가 BE 쪽 문서(`docs_be/api-specification.md` #8 수정본, `multi-tenancy-plan.md`, `attendance-project-context.md`)를 갱신해서 전체를 다시 검토하고 재정리함. 아래는 카테고리별로 나눔.
+> 2026-08-19: STEP29에서 BE 신규 API 5종(사용자 재활성화/비밀번호 재설정/사용자 대시보드/출석률 랭킹/단체정보·출석정책 설정)을 전부 구현 완료함. 남은 항목은 STEP27부터 이어져온 것들과 상시 확인 사항뿐.
 
-**완전히 해결돼서 지운 항목**
-- ~~NFC 태그/출석 기록 API의 organizationId 필터링 누락~~ → **2026-08-05 백엔드에서 전부 해결 확인** (`multi-tenancy-plan.md` §8, 브랜치 `feat/nfc-tag-org-filter`). `NfcTag` 엔티티에 organizationId 컬럼 추가 + 스키마 마이그레이션까지 완료, 이제 User/Session/Attendance/Statistics/NFC 전 도메인이 단체별로 격리됨. 프론트가 추가로 할 일 없음(원래도 JWT만 보내면 서버가 자동 필터링하는 구조였음)
-- ~~세션명 검색 파라미터명 추정(`keyword`)~~ → `api-specification.md`(#8)로 `status, keyword, page, size`가 실제 파라미터명으로 확정됨. 이미 그렇게 구현돼 있어서 코드 변경 없음
-- ~~세션 생성/수정 요청의 NFC 태그 참조 필드명 추정~~ → 같은 문서로 `nfcTagId`가 맞다고 확정됨(이미 그렇게 구현돼 있음). 다만 **응답 쪽** 표시용 필드명(현재 `nfcTagName`으로 추정 중인 것)은 여전히 미확인
-
-**프론트에서 바로 진행 가능 (BE가 이미 API 제공, 아직 프론트가 안 씀)**
-1. 관리자 비밀번호 변경 — `PATCH /api/users/me/password`(currentPassword, newPassword) 확인됨. 설정 화면(STEP24)에 "계정" 섹션으로 추가 가능
-2. 통계 화면 "최근 완료 세션 평균 출석률" — `GET /api/statistics/dashboard` 응답에 실제로 포함되는 값으로 확인됨(`attendance-project-context.md` "최근 완료 세션 **5개** 평균 출석률" - 세션별 막대 6개가 아니라 **단일 숫자**). STEP25에서 빈 상태로 비워둔 카드를 단일 값으로 다시 채울 수 있음 - 다만 정확한 JSON 필드명은 미확인이라 optional 처리 필요
-3. `DashboardPage.tsx` 일부 카드 — 같은 `GET /api/statistics/dashboard`가 "오늘 세션 수" 등도 포함한다고 문서에 명시돼있어 복구 가능성 있음. 정확한 필드명 미확인이라 실제 응답 확인 후 진행 권장(무턱대고 추정 필드명 그대로 쓰면 조용히 `undefined`가 나올 수 있음)
-
-**BE에서 해줘야(만들어줘야) 하는 것 — 아직 없는 API**
-1. 비밀번호 찾기/재설정(로그아웃 상태에서) — 새로 확인된 `PATCH /api/users/me/password`는 로그인된 본인 전용이라 로그인 화면의 "비밀번호를 잊으셨나요?"엔 못 씀. 별도 엔드포인트 필요
-2. 사용자 재활성화 — `DELETE /api/users/{userId}`(soft delete)만 있고 되돌리는 API가 없음
-3. 설정 API(조직 정보/출석 정책 GET·PUT 4종) — 여전히 명세에 없음, 계속 MSW mock으로만 동작 중
-4. `GET /api/users/dashboard`(사용자 목록 상단 요약 통계) — 여전히 명세에 없음
-5. 출석률 상위/하위 사용자 랭킹용 목록형 통계 API — 개별 사용자 조회(`GET /statistics/users/{id}`)만 있고 전체를 한 번에 주는 API가 없어서 랭킹을 못 뽑음
-6. **(구현이 아니라 확인 요청)** `SessionResponse`/`AttendanceResponse`/`DashboardStatisticsResponse`의 정확한 JSON 필드명 — 명세서엔 요청 필드는 상세히 나와있는데 응답 DTO는 필드 단위로 안 나와있음. 실제 응답 예시(JSON) 하나씩만 공유해줘도 프론트 코드에 남아있는 "추정" 주석들을 다 없앨 수 있음
+**확인된 것 (STEP27, 2026-08-05 - 아직 미착수)**
+1. 관리자 비밀번호 변경(로그인된 본인 전용, STEP29-2의 "비밀번호 재설정"과는 다른 기능) — `PATCH /api/users/me/password`(currentPassword, newPassword). 설정 화면에 "계정" 섹션으로 추가 가능
+2. 통계 화면 "최근 완료 세션 평균 출석률" — `GET /api/statistics/dashboard` 응답에 포함(세션별 막대 6개 아니라 **단일 숫자**, "최근 완료 세션 5개 평균"). STEP25에서 비워둔 카드를 채울 수 있음 - 정확한 JSON 필드명 미확인이라 optional 처리 필요
+3. `DashboardPage.tsx` 일부 카드 — 같은 `GET /api/statistics/dashboard`에 "오늘 세션 수" 등도 포함된다고 문서에 명시됨. 필드명 미확인이라 실제 응답 확인 후 진행 권장
+4. **(구현 아니고 확인 요청)** `SessionResponse`/`AttendanceResponse`/`DashboardStatisticsResponse`의 정확한 JSON 필드명 — 응답 예시(JSON) 공유받으면 프론트에 남은 "추정" 주석을 다 없앨 수 있음
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인

@@ -25,3 +25,18 @@ export interface DashboardStatistics {
   activeUserCount: number
   groupRates: GroupAttendanceRate[]
 }
+
+// 2026-08-18 BE 신규 API 공지로 확인됨(추정 아님). totalRecords=0(출석기록 없음)인 학생은
+// 서버가 top/bottom 양쪽에서 이미 제외해서 내려줌
+export interface AttendanceRankingEntry {
+  userId: number
+  name: string
+  groupName: string
+  attendanceRate: number
+  totalRecords: number
+}
+
+export interface AttendanceRanking {
+  topRanking: AttendanceRankingEntry[]
+  bottomRanking: AttendanceRankingEntry[]
+}

@@ -9,6 +9,8 @@ import type {
   LoginResponse,
   OAuthLoginRequest,
   OAuthProvider,
+  PasswordResetRequest,
+  PasswordResetVerifyRequest,
 } from '../types/auth'
 
 export const login = async (req: LoginRequest): Promise<LoginResponse> => {
@@ -31,6 +33,16 @@ export const requestEmailJoinCode = async (req: EmailJoinRequest): Promise<void>
 export const verifyEmailJoinCode = async (req: EmailJoinVerifyRequest): Promise<LoginResponse> => {
   const { data } = await axiosClient.post<ApiResponse<LoginResponse>>('/auth/join/email/verify', req)
   return data.data
+}
+
+// 로그아웃 상태(비밀번호 분실) 재설정 1단계 - 성공하면 입력한 이메일로 6자리 코드 발송(Redis 5분 TTL)
+export const requestPasswordReset = async (req: PasswordResetRequest): Promise<void> => {
+  await axiosClient.post('/auth/password-reset/request', req)
+}
+
+// 재설정 2단계 - 코드+새 비밀번호 확인. 성공해도 자동 로그인은 안 됨(로그인 폼으로 안내해야 함)
+export const verifyPasswordReset = async (req: PasswordResetVerifyRequest): Promise<void> => {
+  await axiosClient.post('/auth/password-reset/verify', req)
 }
 
 export const logout = async (): Promise<void> => {

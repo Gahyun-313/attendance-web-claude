@@ -41,3 +41,16 @@ export interface EmailJoinVerifyRequest {
   password: string
   name: string
 }
+
+// 2026-08-18: 로그아웃 상태(비밀번호 분실)용 재설정 - 로그인된 본인이 쓰는 PATCH /api/users/me/password와는 다른 기능.
+// 소셜 로그인 전용 계정(provider != null)은 대상 아님(O007)
+export interface PasswordResetRequest {
+  email: string
+}
+
+// 성공해도 자동 로그인은 안 됨 - 새 비밀번호로 /api/auth/login을 다시 호출해야 함
+export interface PasswordResetVerifyRequest {
+  email: string
+  code: string
+  newPassword: string
+}
