@@ -65,7 +65,28 @@ export const updateUser = async (id: number, req: UserUpdateRequest): Promise<St
   return mapUser(data.data)
 }
 
-// 사용자 삭제 = soft delete(비활성화) - §9에 명시된 대로 별도 "재활성화" API는 없음
+// 사용자 삭제 = soft delete(비활성화)
 export const deactivateUser = async (id: number): Promise<void> => {
   await axiosClient.delete(`/users/${id}`)
+}
+
+// 재활성화 (2026-08-18 BE 신규 API 공지로 확인됨 - 예전엔 없었음). 응답은 UserResponse 전체를 내려주지만
+// mapUser가 쓰는 필드만 골라 쓰므로 UserResponseDto/mapUser를 그대로 재사용
+export const activateUser = async (id: number): Promise<StudentAccount> => {
+  const { data } = await axiosClient.post<ApiResponse<UserResponseDto>>(`/users/${id}/activate`)
+  return mapUser(data.data)
+}
+
+// 사용자 관리 화면 상단 요약 통계 (2026-08-18 BE 신규 API 공지로 확인됨 - 예전엔 MSW mock이었음).
+// activateUsers는 오타 아님 - 실제 API 필드명 그대로
+export interface UserDashboardSummary {
+  totalUsers: number
+  activateUsers: number
+  averageAttendanceRate: number
+  newUsersThisMonth: number
+}
+
+export const getUserDashboard = async (): Promise<UserDashboardSummary> => {
+  const { data } = await axiosClient.get<ApiResponse<UserDashboardSummary>>('/users/dashboard')
+  return data.data
 }

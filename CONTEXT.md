@@ -313,16 +313,43 @@ src/
   - **안 건드린 것들**: `src/mocks/handlers.ts`의 MSW mock 4종(설정 조직정보/출석정책 GET·PUT, 사용자 대시보드) — 사용자가 유지하기로 결정, 설정 화면(STEP24)이 여기 의존. `SessionsPage`의 "출석률" 컬럼은 원래도 가짜 숫자가 아니라 `'-'` placeholder였어서 그대로 둠
   - `npx tsc --noEmit` 클린 확인
 
+- STEP 27 (2026-08-05, 완료): 사용자가 갱신한 BE 문서(`docs_be/api-specification.md` #8 수정본, `multi-tenancy-plan.md`, `attendance-project-context.md`) 재검토 + "다음 작업" 전체 재정리, BE에서 해줘야 하는 것 별도 분류(사용자 요청). 브랜치 `docs/step27-be-docs-review`
+  - **해결 확인**: NFC 태그/출석 기록 organizationId 필터링(STEP22 known-limitation)이 2026-08-05 백엔드에서 완전히 해결됨(`feat/nfc-tag-org-filter`) - 다음 작업 목록에서 제거
+  - **확정으로 정정**: 세션 목록 검색 파라미터 `keyword`, 세션 생성/수정 요청의 `nfcTagId` 필드 - 둘 다 "추정"이었던 걸 공식 문서로 확정 처리(`api/sessions.ts`, `types/session.ts` 주석만 수정, 동작 변경 없음)
+  - **새로 알게 된 것**: `PATCH /api/users/me/password`(비밀번호 변경) API가 실제로 존재함 - 설정 화면에 추가 가능. `GET /api/statistics/dashboard`에 "최근 완료 세션 5개 평균 출석률"이 실제로 포함됨(세션별 막대 6개가 아니라 단일 값) - STEP25에서 비워둔 통계 카드를 채울 수 있음. 둘 다 아직 구현은 안 함(정리만) - 다음에 진행 여부 확인 필요
+  - `npx tsc --noEmit` 클린 확인 (동작 변경 없는 주석/문서 정리 위주라 리스크 낮음)
+  - **보안 이슈 발견 및 조치 (같은 날 이어서)**: `docs_be/` 커밋 직후 "퍼블릭으로 올릴 때 문제없는지 확인해줘" 요청으로 전체 추적 파일을 스캔한 결과, `docs_be/attendance-project-context.md`에 실제 EC2 퍼블릭 IP(`43.201.20.36`, 4곳)와 실제 RDS 엔드포인트(`attendance-db.cn00oikqi6n2.ap-northeast-2.rds.amazonaws.com`, 1곳), 이미 교체된 JWT_SECRET 예시값(1곳)이 그대로 들어있던 걸 발견함. 다행히 `origin/develop`엔 아직 안 올라간 로컬 전용 커밋이라 `filter-branch` 없이 바로 조치 가능했음
+    - **조치**: `docs_be/` 디렉터리 전체를 리포에서 삭제하고 `.gitignore`에 `docs_be/` 추가 (BE 참고 문서는 로컬에만 두고 이 프론트 리포엔 아예 커밋하지 않는 방향으로 결정 - 사용자 요청)
+    - `.env`는 원래부터 gitignore돼있어서 문제없었고, AWS 키/DB 비밀번호/Google·Kakao 클라이언트 시크릿/개인키 파일 등은 스캔 결과 안 나옴 - 이번 건이 유일한 발견 사항
+    - 로컬 develop이 origin보다 1커밋 앞선 상태(바로 이 STEP27 커밋)라 `git commit --amend`로 해당 커밋 자체에서 docs_be를 빼는 방식으로 정리 - 즉 docs_be가 존재했던 커밋이 아예 히스토리에 안 남음
+
+- STEP 28 (2026-08-18, 접수만 완료 - 구현은 다음 채팅): 사용자가 BE 신규 API 5종 공지 문서를 전달함. STEP27에서 "BE에서 해줘야 하는 것"으로 분류했던 5개 항목이 **전부 이 공지로 해결됨**. 아직 프론트 구현은 시작 안 함 - 다음 채팅에서 이어감(§다음 작업 참고)
+  - 서버 상태: `http://43.201.20.36:8080`, 오전 배포 이슈(로그인 전체 실패 `ETIMEDOUT`) 해결 완료, 비밀번호/카카오/구글 로그인 전부 정상 확인됨(2026-08-18). 도메인/HTTPS는 아직 미적용 (IP+포트 직접 연결 상태, Nginx는 다음 순서)
+  - 5개 API 전부 공통: `Authorization: Bearer {accessToken}` 필요, **ADMIN 전용**(STUDENT 토큰이면 403). 토큰 발급/갱신은 기존 `/api/auth/login`, `/api/auth/oauth/{provider}`, `/api/auth/refresh` 그대로(변경 없음)
+
+- STEP 29 (2026-08-19, 완료): STEP28에서 접수만 해둔 BE 신규 API 5종을 전부 구현 (사용자가 "커밋까지 작업해줘"로 같은 채팅에서 이어서 진행 요청). 브랜치 `feat/step29-new-be-apis`
+  - **STEP29-1 사용자 재활성화**: `api/users.ts`에 `activateUser(id)` 추가(`POST /users/:id/activate`). `UsersPage.tsx`의 액션 컬럼이 `row.active` 값에 따라 비활성화/활성화 버튼을 조건부로 보여주도록 수정
+  - **STEP29-2 비밀번호 재설정(로그아웃 상태용, 2단계)**: `types/auth.ts`에 `PasswordResetRequest`/`PasswordResetVerifyRequest` 추가, `api/auth.ts`에 `requestPasswordReset`/`verifyPasswordReset` 추가. `LoginPage.tsx`의 비활성화돼있던 "비밀번호를 잊으셨나요?" 링크를 실제 동작하는 버튼으로 바꾸고, 로그인 폼 영역을 `resetStep`(`null`/`'request'`/`'verify'`) 3단 조건부 렌더링으로 재구성 - 이메일 입력→코드 발송, 코드+새 비밀번호 입력→재설정, 완료 후 로그인 폼으로 복귀 + 성공 배너 표시. 재설정 성공해도 자동 로그인 안 되는 서버 스펙 그대로 반영(로그인 폼으로 돌려보내기만 함)
+  - **STEP29-3 사용자 대시보드**: `api/users.ts`에 `getUserDashboard()`/`UserDashboardSummary` 추가(`GET /users/dashboard`, 필드명 `activateUsers` 그대로 - 오타 아님). `UsersPage.tsx` 통계카드의 "평균 출석률"/"이번 달 신규"(STEP25에서 `-`로 비워둔 것)를 실제 값으로 교체
+  - **STEP29-4 출석률 랭킹**: `types/statistics.ts`에 `AttendanceRankingEntry`/`AttendanceRanking` 추가, `api/statistics.ts`에 `getAttendanceRanking(limit=5)` 추가(`GET /statistics/ranking`). `StatisticsPage.tsx`의 "출석률 상위/하위 사용자"(STEP25에서 빈 상태로 비워둔 것)를 실제 리스트로 교체, 하위 리스트는 기존 `isLow()` 헬퍼로 80% 미만 빨간색 표시 유지
+  - **STEP29-5 설정 화면 전면 교체**: `types/settings.ts`/`api/settings.ts`/`SettingsPage.tsx` 전부 다시 작성 - 기존 mock 기준 조직정보/출석정책 2개 카드 구조를 실제 API(`GET/PUT /organizations/me`) 기준 단일 카드로 통합. `contactEmail` 필드 제거, 읽기전용 `단체 코드` 표시 추가. `mocks/handlers.ts`의 4개 mock 핸들러(users/dashboard, settings 조직/정책 2종) 전부 제거하고 빈 배열로 정리 - MSW 인프라(`browser.ts`/`main.tsx`)는 나중을 위해 그대로 유지
+  - `npx tsc --noEmit` 클린 확인 (STEP29-2 LoginPage.tsx 대규모 JSX 변경 직후, STEP29-4/5 완료 후 총 2회 확인)
+
 ## 다음 작업
 
-1. STEP19~21에서도 여전히 추정으로 남아있는 DTO 필드명들(세션의 nfcTag 참조, 출석 기록의 사용자 이름/학번/그룹, 세션명 검색 파라미터명)은 실제 백엔드 응답을 브라우저/Postman으로 확인해서 각 `api/*.ts`의 매핑 함수만 필요시 수정
-2. ~~설정 화면~~ → STEP24(2026-07-25)에서 UI 구현 완료(MSW mock 연동). 실제 백엔드 설정 API가 나오면 `api/settings.ts`/`types/settings.ts`만 실제 응답 모양에 맞춰 조정하면 됨. 관리자 계정(비밀번호 변경) 설정은 여전히 미구현
-3. ~~`axiosClient.ts`의 401 응답 인터셉터~~ → STEP23(2026-07-25)에서 구현 완료. 다만 실제 Access Token 만료(1시간) 상황에서의 갱신+재시도 흐름은 아직 실사용 테스트 안 됨 - 로그인 후 1시간 넘게 켜두고 요청 날려서 실제로 갱신되는지 확인 권장
-4. 통계 화면의 "최근 완료 세션 평균"/"상위·하위 사용자 랭킹", 대시보드 화면 전체, 사용자·NFC 관리 통계 카드 일부는 대응하는 백엔드 API가 없어서 STEP25(2026-07-25)부터 빈 상태(`-`/"데이터가 없습니다")로 표시 중 - 필요해지면 백엔드에 전용 엔드포인트 추가 요청
-5. **NFC 태그/출석 기록 API의 organizationId 필터링 누락(STEP22 참고)** — 백엔드에서 고쳐지면 알려주기로 함. 그 전까지 다른 단체가 실제로 생기면 문제가 드러날 수 있음을 인지하고 있을 것
-6. ~~소셜 로그인 실 동작 확인~~ → STEP22 후속 확인(2026-07-25)에서 구글/카카오 둘 다 실제 로그인 성공 확인 완료. 배포(EC2) 도메인으로 소셜 로그인 쓸 계획이면, 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 동일하게 등록 필요
-7. 아직 손 안 댄 것: 실제 `npm run build` 최종 검증(로컬에서), ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단으로 미설치 상태 계속), Pagination 컴포넌트는 정의만 해두고 실제 화면에서 아직 한 번도 안 씀
-8. 로컬에 실제 git 저장소가 생겼으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
+> 2026-08-19: STEP29에서 BE 신규 API 5종(사용자 재활성화/비밀번호 재설정/사용자 대시보드/출석률 랭킹/단체정보·출석정책 설정)을 전부 구현 완료함. 남은 항목은 STEP27부터 이어져온 것들과 상시 확인 사항뿐.
+
+**확인된 것 (STEP27, 2026-08-05 - 아직 미착수)**
+1. 관리자 비밀번호 변경(로그인된 본인 전용, STEP29-2의 "비밀번호 재설정"과는 다른 기능) — `PATCH /api/users/me/password`(currentPassword, newPassword). 설정 화면에 "계정" 섹션으로 추가 가능
+2. 통계 화면 "최근 완료 세션 평균 출석률" — `GET /api/statistics/dashboard` 응답에 포함(세션별 막대 6개 아니라 **단일 숫자**, "최근 완료 세션 5개 평균"). STEP25에서 비워둔 카드를 채울 수 있음 - 정확한 JSON 필드명 미확인이라 optional 처리 필요
+3. `DashboardPage.tsx` 일부 카드 — 같은 `GET /api/statistics/dashboard`에 "오늘 세션 수" 등도 포함된다고 문서에 명시됨. 필드명 미확인이라 실제 응답 확인 후 진행 권장
+4. **(구현 아니고 확인 요청)** `SessionResponse`/`AttendanceResponse`/`DashboardStatisticsResponse`의 정확한 JSON 필드명 — 응답 예시(JSON) 공유받으면 프론트에 남은 "추정" 주석을 다 없앨 수 있음
+
+**기타 (계속 유지)**
+- Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
+- 배포 도메인으로 소셜 로그인 쓸 계획이면 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 등록 필요
+- 로컬 전용이라 여기서 확인 불가: 실제 `npm run build` 최종 검증, ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단)
+- 로컬에 실제 git 저장소가 있으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
 
 ## 결정 사항 히스토리
 

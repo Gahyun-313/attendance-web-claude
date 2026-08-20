@@ -41,7 +41,8 @@ const mapSession = (dto: SessionResponseDto): Session => ({
 
 export interface ListSessionsParams {
   status?: SessionStatus
-  keyword?: string // 세션명 검색 - §9 "상태/세션명 필터링" 기준, 정확한 파라미터명은 미확인이라 keyword로 추정
+  // 2026-08-05: api-specification.md(#8 수정본)로 파라미터명이 실제로 keyword가 맞다고 확정됨 (더 이상 추정 아님)
+  keyword?: string
 }
 
 export const listSessions = async (params: ListSessionsParams = {}): Promise<Session[]> => {

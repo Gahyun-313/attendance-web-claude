@@ -7,7 +7,14 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
 import axios from 'axios'
-import { login, oauthLogin, requestEmailJoinCode, verifyEmailJoinCode } from '../api/auth'
+import {
+  login,
+  oauthLogin,
+  requestEmailJoinCode,
+  requestPasswordReset,
+  verifyEmailJoinCode,
+  verifyPasswordReset,
+} from '../api/auth'
 import type { ApiErrorResponse } from '../types/common'
 import type { LoginResponse, OAuthProvider } from '../types/auth'
 import type { GoogleCredentialResponse } from '../types/oauth'
@@ -20,6 +27,8 @@ const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined
 
 type Mode = 'login' | 'signup'
 type JoinStep = 'request' | 'verify'
+// 2026-08-18: 로그아웃 상태 비밀번호 재설정 - null이면 평소 로그인 폼, 아니면 재설정 폼(2단계)을 보여줌
+type ResetStep = 'request' | 'verify' | null
 
 const EmailIcon = () => (
   <svg className="size-4 text-gray-500" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -79,6 +88,13 @@ const LoginPage = () => {
   const [joinPassword, setJoinPassword] = useState('')
   const [joinName, setJoinName] = useState('')
 
+  // ===== 비밀번호 재설정(로그아웃 상태) 폼 상태 - 로그인 모드 안에서 토글되는 서브플로우 =====
+  const [resetStep, setResetStep] = useState<ResetStep>(null)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetCode, setResetCode] = useState('')
+  const [resetNewPassword, setResetNewPassword] = useState('')
+  const [resetDone, setResetDone] = useState(false)
+
   // 소셜 로그인 SDK 자체 문제(스크립트 로드 실패, 환경변수 누락 등) 안내용 - 서버 에러(axios)와 별도로 관리
   const [socialError, setSocialError] = useState<string | null>(null)
 
@@ -126,6 +142,22 @@ const LoginPage = () => {
     onSuccess: handleAuthSuccess,
   })
 
+  const requestResetMutation = useMutation({
+    mutationFn: requestPasswordReset,
+    onSuccess: () => setResetStep('verify'),
+  })
+
+  // 성공해도 자동 로그인은 안 되는 API라 handleAuthSuccess를 안 씀 - 재설정 완료 안내만 띄우고 로그인 폼으로 돌아감
+  const verifyResetMutation = useMutation({
+    mutationFn: verifyPasswordReset,
+    onSuccess: () => {
+      setResetStep(null)
+      setResetDone(true)
+      setResetCode('')
+      setResetNewPassword('')
+    },
+  })
+
   useEffect(() => {
     googleCallbackRef.current = (response) => {
       oauthMutation.mutate({ provider: 'google', token: response.credential })
@@ -137,6 +169,8 @@ const LoginPage = () => {
     extractError(oauthMutation.error, '소셜 로그인에 실패했어요. 다시 시도해주세요.') ??
     extractError(requestJoinMutation.error, '인증 코드 발송에 실패했어요. 단체 코드와 이메일을 확인해주세요.') ??
     extractError(verifyJoinMutation.error, '가입에 실패했어요. 인증 코드를 확인해주세요.') ??
+    extractError(requestResetMutation.error, '인증 코드 발송에 실패했어요. 이메일을 확인해주세요.') ??
+    extractError(verifyResetMutation.error, '비밀번호 재설정에 실패했어요. 인증 코드를 확인해주세요.') ??
     socialError
 
   // 구글 Identity Services 스크립트를 불러오고, 아직 초기화 전이면 initialize()까지 한 번만 실행
@@ -218,10 +252,22 @@ const LoginPage = () => {
     })
   }
 
-  // 로그인 ↔ 가입 전환 시 가입 하위 단계/에러 상태를 초기화 (다른 모드로 넘어갔다가 되돌아왔을 때 이전 에러가 남지 않게)
+  const handleRequestReset = (e: FormEvent) => {
+    e.preventDefault()
+    requestResetMutation.mutate({ email: resetEmail.trim() })
+  }
+
+  const handleVerifyReset = (e: FormEvent) => {
+    e.preventDefault()
+    verifyResetMutation.mutate({ email: resetEmail.trim(), code: resetCode.trim(), newPassword: resetNewPassword })
+  }
+
+  // 로그인 ↔ 가입 전환 시 가입/재설정 하위 단계·에러 상태를 초기화 (다른 모드로 넘어갔다가 되돌아왔을 때 이전 에러가 안 남게)
   const switchMode = (next: Mode) => {
     setMode(next)
     setJoinStep('request')
+    setResetStep(null)
+    setResetDone(false)
     setSocialError(null)
   }
 
@@ -253,104 +299,211 @@ const LoginPage = () => {
         <div className="w-full max-w-md">
           {mode === 'login' ? (
             <>
-              <h2 className="mb-1 text-2xl font-bold text-gray-800">관리자 로그인</h2>
-              <p className="mb-8 text-sm text-gray-500">출석하자 관리자 계정으로 로그인하세요.</p>
+              {resetStep === null ? (
+                <>
+                  <h2 className="mb-1 text-2xl font-bold text-gray-800">관리자 로그인</h2>
+                  <p className="mb-8 text-sm text-gray-500">출석하자 관리자 계정으로 로그인하세요.</p>
 
-              <form onSubmit={handleSubmit}>
-                {/* ===== UI: 아이디/비밀번호 입력칸 ===== */}
-                <div className="mb-4">
-                  <Input
-                    label={
-                      <>
-                        <EmailIcon /> 이메일
-                      </>
-                    }
-                    type="text"
-                    placeholder="admin@hb.ac.kr"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </div>
+                  {/* ===== UI: 재설정 완료 안내 - 새 비밀번호로 다시 로그인해야 함(재설정 API는 자동 로그인 안 됨) ===== */}
+                  {resetDone && (
+                    <p className="mb-4 rounded-lg bg-[oklch(95%_0.05_152)] px-3 py-2 text-sm text-[oklch(42%_0.13_152)]">
+                      비밀번호가 재설정됐어요. 새 비밀번호로 로그인해주세요.
+                    </p>
+                  )}
 
-                <div className="mb-4">
-                  <Input
-                    label={
-                      <>
-                        <LockIcon /> 비밀번호
-                      </>
-                    }
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
+                  <form onSubmit={handleSubmit}>
+                    {/* ===== UI: 아이디/비밀번호 입력칸 ===== */}
+                    <div className="mb-4">
+                      <Input
+                        label={
+                          <>
+                            <EmailIcon /> 이메일
+                          </>
+                        }
+                        type="text"
+                        placeholder="admin@hb.ac.kr"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                {/* ===== UI: 로그인 유지 체크박스 + 비밀번호 찾기 링크(비활성) ===== */}
-                <div className="mb-6 flex items-center justify-between text-sm">
-                  <label className="flex items-center gap-2 text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="size-4 rounded border-gray-300"
-                    />
-                    로그인 유지
-                  </label>
-                  {/* TODO: 비밀번호 재설정 플로우는 백엔드 API가 아직 없음 (§9 참고) - 연결 안 함 */}
-                  <span className="cursor-not-allowed font-medium text-blue-600" title="아직 지원하지 않는 기능">
-                    비밀번호를 잊으셨나요?
-                  </span>
-                </div>
+                    <div className="mb-4">
+                      <Input
+                        label={
+                          <>
+                            <LockIcon /> 비밀번호
+                          </>
+                        }
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                {errorMessage && <p className="mb-4 text-sm text-red-600">{errorMessage}</p>}
+                    {/* ===== UI: 로그인 유지 체크박스 + 비밀번호 찾기 링크 ===== */}
+                    <div className="mb-6 flex items-center justify-between text-sm">
+                      <label className="flex items-center gap-2 text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="size-4 rounded border-gray-300"
+                        />
+                        로그인 유지
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetStep('request')
+                          setResetDone(false)
+                        }}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        비밀번호를 잊으셨나요?
+                      </button>
+                    </div>
 
-                {/* ===== UI: 로그인 버튼 - variant="brand"는 로그인 화면 전용 파란색(다른 화면 primary와 다름) ===== */}
-                <Button type="submit" variant="brand" className="w-full" disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? '로그인 중...' : '로그인'}
-                </Button>
-              </form>
+                    {errorMessage && <p className="mb-4 text-sm text-red-600">{errorMessage}</p>}
 
-              {/* ===== UI: 구분선 + 소셜 로그인 ===== */}
-              <div className="my-6 flex items-center gap-3 text-xs text-gray-400">
-                <div className="h-px flex-1 bg-gray-200" />
-                또는
-                <div className="h-px flex-1 bg-gray-200" />
-              </div>
+                    {/* ===== UI: 로그인 버튼 - variant="brand"는 로그인 화면 전용 파란색(다른 화면 primary와 다름) ===== */}
+                    <Button type="submit" variant="brand" className="w-full" disabled={loginMutation.isPending}>
+                      {loginMutation.isPending ? '로그인 중...' : '로그인'}
+                    </Button>
+                  </form>
 
-              <div className="flex flex-col gap-2.5">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="flex w-full items-center justify-center gap-2"
-                  onClick={handleGoogleLogin}
-                  disabled={isSocialPending}
-                >
-                  <GoogleMark /> Google로 로그인
-                </Button>
-                <Button
-                  type="button"
-                  variant="kakao"
-                  className="flex w-full items-center justify-center gap-2"
-                  onClick={handleKakaoLogin}
-                  disabled={isSocialPending}
-                >
-                  <KakaoMark /> Kakao로 로그인
-                </Button>
-              </div>
+                  {/* ===== UI: 구분선 + 소셜 로그인 ===== */}
+                  <div className="my-6 flex items-center gap-3 text-xs text-gray-400">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    또는
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
 
-              {/* ===== UI: 가입 모드로 전환 ===== */}
-              <p className="mt-6 text-center text-sm text-gray-500">
-                계정이 없으신가요?{' '}
-                <button
-                  type="button"
-                  onClick={() => switchMode('signup')}
-                  className="font-semibold text-blue-600 hover:underline"
-                >
-                  가입 →
-                </button>
-              </p>
+                  <div className="flex flex-col gap-2.5">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="flex w-full items-center justify-center gap-2"
+                      onClick={handleGoogleLogin}
+                      disabled={isSocialPending}
+                    >
+                      <GoogleMark /> Google로 로그인
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="kakao"
+                      className="flex w-full items-center justify-center gap-2"
+                      onClick={handleKakaoLogin}
+                      disabled={isSocialPending}
+                    >
+                      <KakaoMark /> Kakao로 로그인
+                    </Button>
+                  </div>
+
+                  {/* ===== UI: 가입 모드로 전환 ===== */}
+                  <p className="mt-6 text-center text-sm text-gray-500">
+                    계정이 없으신가요?{' '}
+                    <button
+                      type="button"
+                      onClick={() => switchMode('signup')}
+                      className="font-semibold text-blue-600 hover:underline"
+                    >
+                      가입 →
+                    </button>
+                  </p>
+                </>
+              ) : resetStep === 'request' ? (
+                <>
+                  <h2 className="mb-1 text-2xl font-bold text-gray-800">비밀번호 재설정</h2>
+                  <p className="mb-8 text-sm text-gray-500">
+                    가입할 때 사용한 이메일로 인증 코드를 보내드려요. (소셜 로그인 전용 계정은 대상이 아니에요)
+                  </p>
+                  <form onSubmit={handleRequestReset}>
+                    <div className="mb-6">
+                      <Input
+                        label={
+                          <>
+                            <EmailIcon /> 이메일
+                          </>
+                        }
+                        type="email"
+                        placeholder="you@example.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {errorMessage && <p className="mb-4 text-sm text-red-600">{errorMessage}</p>}
+                    <Button type="submit" variant="brand" className="w-full" disabled={requestResetMutation.isPending}>
+                      {requestResetMutation.isPending ? '코드 발송 중...' : '인증 코드 받기'}
+                    </Button>
+                  </form>
+                  <button
+                    type="button"
+                    onClick={() => setResetStep(null)}
+                    className="mt-4 text-sm text-gray-500 hover:underline"
+                  >
+                    ← 로그인으로 돌아가기
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="mb-1 text-2xl font-bold text-gray-800">비밀번호 재설정</h2>
+                  <p className="mb-8 text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">{resetEmail}</span>로 보낸 인증 코드와 새 비밀번호를
+                    입력해주세요.
+                  </p>
+                  <form onSubmit={handleVerifyReset}>
+                    <div className="mb-4">
+                      <Input
+                        label="인증 코드"
+                        type="text"
+                        placeholder="6자리 코드"
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="mb-6">
+                      <Input
+                        label={
+                          <>
+                            <LockIcon /> 새 비밀번호
+                          </>
+                        }
+                        type="password"
+                        placeholder="8자 이상"
+                        value={resetNewPassword}
+                        onChange={(e) => setResetNewPassword(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                    </div>
+                    {errorMessage && <p className="mb-4 text-sm text-red-600">{errorMessage}</p>}
+                    <Button type="submit" variant="brand" className="w-full" disabled={verifyResetMutation.isPending}>
+                      {verifyResetMutation.isPending ? '재설정 중...' : '비밀번호 재설정'}
+                    </Button>
+                    <div className="mt-3 flex justify-between text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setResetStep('request')}
+                        className="text-gray-500 hover:underline"
+                      >
+                        ← 이메일 다시 입력
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => requestResetMutation.mutate({ email: resetEmail.trim() })}
+                        disabled={requestResetMutation.isPending}
+                        className="font-medium text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
+                      >
+                        코드 재전송
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
             </>
           ) : (
             <>

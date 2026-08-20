@@ -10,7 +10,7 @@ import type { TableColumn } from '../components'
 import { userStatusMeta } from '../utils/badgeColors'
 import { GROUPS } from '../utils/groups'
 import type { StudentAccount } from '../types/student'
-import { createUser, deactivateUser, listUserGroups, listUsers, updateUser } from '../api/users'
+import { activateUser, createUser, deactivateUser, getUserDashboard, listUserGroups, listUsers, updateUser } from '../api/users'
 import { getUserStatistics } from '../api/statistics'
 
 const STATUS_FILTERS = ['활성/비활성 전체', '활성', '비활성']
@@ -71,6 +71,10 @@ const UsersPage = () => {
     onSuccess: invalidateUsers,
   })
   const deactivateMutation = useMutation({ mutationFn: deactivateUser, onSuccess: invalidateUsers })
+  const activateMutation = useMutation({ mutationFn: activateUser, onSuccess: invalidateUsers })
+
+  // 사용자 관리 화면 상단 통계카드용 (2026-08-18: 실제 API로 연동, 예전엔 MSW mock)
+  const dashboardQuery = useQuery({ queryKey: ['usersDashboard'], queryFn: getUserDashboard })
 
   // 그룹/검색은 이미 서버 쿼리에 반영됨(위 usersQuery) - 활성/비활성만 클라이언트에서 마저 거름
   // (§9/§12엔 활성상태 필터 파라미터가 없어서 서버에 못 보냄)
@@ -78,13 +82,14 @@ const UsersPage = () => {
     return users.filter((u) => statusFilter === '활성/비활성 전체' || (statusFilter === '활성' ? u.active : !u.active))
   }, [users, statusFilter])
 
-  // 전체/활성 사용자 수는 실제 목록 기준 계산. 평균 출석률/이번 달 신규는 대응 API(GET /api/users/dashboard)가
-  // 없어서 2026-07-25에 목업 시드 값을 제거함(사용자 요청) - 지금은 '-'로 빈 상태 표시
+  // 전체/활성 사용자 수는 실제 목록 기준 계산. 평균 출석률/이번 달 신규는 2026-08-18부터
+  // 실제 GET /api/users/dashboard로 채움 (STEP25에서 '-'로 비워뒀던 것 - 이제 대응 API 생김)
+  const dashboard = dashboardQuery.data
   const statCards = [
     { label: '전체 사용자', value: `${users.length}명` },
     { label: '활성 사용자', value: `${users.filter((u) => u.active).length}명` },
-    { label: '평균 출석률', value: '-' },
-    { label: '이번 달 신규', value: '-' },
+    { label: '평균 출석률', value: dashboard ? `${dashboard.averageAttendanceRate.toFixed(1)}%` : '-' },
+    { label: '이번 달 신규', value: dashboard ? `${dashboard.newUsersThisMonth}명` : '-' },
   ]
 
   const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
@@ -115,9 +120,13 @@ const UsersPage = () => {
           <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
             수정
           </Button>
-          {row.active && (
+          {row.active ? (
             <Button variant="secondary" size="sm" onClick={() => deactivateMutation.mutate(row.id)}>
               비활성화
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => activateMutation.mutate(row.id)}>
+              활성화
             </Button>
           )}
         </div>
