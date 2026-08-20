@@ -7,6 +7,7 @@
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
 import type { CreateUserRequest, StudentAccount, UserUpdateRequest } from '../types/student'
+import type { PasswordChangeRequest } from '../types/user'
 import { unwrapListPayload } from '../utils/pageResponse'
 
 interface UserResponseDto {
@@ -89,4 +90,10 @@ export interface UserDashboardSummary {
 export const getUserDashboard = async (): Promise<UserDashboardSummary> => {
   const { data } = await axiosClient.get<ApiResponse<UserDashboardSummary>>('/users/dashboard')
   return data.data
+}
+
+// 로그인된 관리자 본인 비밀번호 변경 (2026-08-20 api-specification.md #8 수정본으로 확정: PATCH /users/me/password,
+// userId 불필요 - 본인 전용). 응답 바디 없음
+export const changePassword = async (req: PasswordChangeRequest): Promise<void> => {
+  await axiosClient.patch('/users/me/password', req)
 }

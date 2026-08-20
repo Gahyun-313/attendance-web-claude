@@ -1,6 +1,7 @@
 // 출석 기록 API. attendance-project-context.md §9 "출석 기록 API" 기준.
-// AttendanceResponse가 사용자 이름/학번/그룹명을 어떤 키로 채워 내려주는지는 문서에 없어서
-// 응답에 없는 필드는 optional로 받고 mapAttendance()에서 '-'로 대체 - 실제 응답 확인되면 여기만 고치면 됨
+// AttendanceResponse의 사용자 이름/학번/그룹명 필드는 2026-08-20 AttendanceResponse.java 소스로 확정됨
+// (userName/studentId/groupName - 기존 추정이 전부 정확했음). null 가능성(예: 사용자 조회 실패)은 그대로
+// optional 처리 + mapAttendance()에서 '-'로 대체하는 방어 로직 유지
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
 import type { AttendanceDashboardStats, AttendanceRecord, AttendanceStatus, AttendanceStatusUpdateRequest } from '../types/attendance'

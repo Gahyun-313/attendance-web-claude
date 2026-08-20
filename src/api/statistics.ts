@@ -1,6 +1,6 @@
 // 통계 API. attendance-project-context.md §9 "통계 API" 기준.
-// DTO 필드명은 클래스 이름만 확인됐고 필드 단위 상세는 문서에 없어서 §3 화면 정의 기준으로 추정해서 매핑함 -
-// 실제 응답을 보고 다르면 이 파일의 인터페이스/매핑만 고치면 됨
+// 2026-08-20: overall/dashboard 응답 DTO 필드명은 OverallStatisticsResponse/DashboardStatisticsResponse.java
+// 소스로 확정됨(types/statistics.ts 주석 참고 - dashboard 쪽은 groupRates→groupAttendanceRates 등 버그 수정 있었음)
 import axiosClient from './axiosClient'
 import type { ApiResponse } from '../types/common'
 import type { AttendanceRanking, DashboardStatistics, GroupAttendanceRate, OverallStatistics } from '../types/statistics'

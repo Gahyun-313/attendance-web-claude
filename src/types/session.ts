@@ -1,6 +1,8 @@
 // 2026-07-23(STEP19): 실제 세션 API 연동 반영. attendance-project-context.md §8(엔티티)/§9(API) 기준.
-// Session은 화면에서 쓰는 뷰 모델 - 실제 SessionResponse의 정확한 JSON 필드명(특히 nfcTag 참조 방식)은
-// 문서에 없어서 api/sessions.ts의 매핑 함수 한 곳에서만 변환하도록 분리해둠 (실제 응답 보고 그 함수만 고치면 됨)
+// Session은 화면에서 쓰는 뷰 모델 - 실제 SessionResponse 필드는 2026-08-20 SessionResponse.java 소스로 전부
+// 확정됨(title/description/groupName/sessionDate/startTime/endTime/lateThresholdMinutes/location/status/note는
+// 기존 추정이 정확했음). 단 NFC 태그 정보는 nfcTagId/nfcTagName 평면 필드가 아니라 nfcTag(id/uid/name/location)
+// 중첩 객체였음(버그, api/sessions.ts에서 수정) - 그 매핑만 담당하던 원칙은 계속 유지
 export type SessionStatus = 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED'
 
 export interface Session {
