@@ -343,9 +343,15 @@ src/
   - **STEP30-5 주석 정리**: `types/session.ts`/`types/attendance.ts`/`api/statistics.ts`의 "추정" 주석을 실제 소스 확인 결과로 교체 - `AttendanceResponse`는 기존 추정(userName/studentId/groupName/checkInTime/nfcLocation/modifiedBy/note)이 전부 정확했던 것으로 확인(버그 없음)
   - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요(샌드박스엔 `node_modules` 없음) - 변경 파일 목록: `types/user.ts`, `types/statistics.ts`, `types/session.ts`, `types/attendance.ts`, `api/users.ts`, `api/statistics.ts`, `api/sessions.ts`, `api/attendances.ts`, `pages/SettingsPage.tsx`, `pages/StatisticsPage.tsx`, `pages/DashboardPage.tsx`
 
+- STEP31 (2026-08-25, 완료): 사용자가 이력서 작성 중 실사용해보다가 세션 관리 화면에서 버그 2건을 발견해서 신고 - 날짜/시간 수정이 반영 안 됨, 새 세션 생성이 안 됨, 생성 폼의 그룹 목록이 실제 그룹과 다름. 브랜치 `feat/step31-session-form-fixes`
+  - **원인 1 (그룹 불일치)**: `SessionsPage.tsx`가 그룹 select에 실제 API가 아니라 `utils/groups.ts`의 옛 목업 하드코딩 상수(`GROUPS`)를 그대로 쓰고 있었음 - `UsersPage.tsx`는 이미 STEP19 즈음 `GET /api/users/groups`(`listUserGroups()`)로 실 그룹을 불러와 쓰고 `GROUPS`는 API가 빈 배열일 때만 폴백으로 쓰는데, `SessionsPage.tsx`만 이 전환이 누락돼 있었음
+  - **원인 2 (생성/수정 실패가 안 보임)**: `createMutation`/`updateMutation`에 `onError` 처리가 없고, 제출 시 성공/실패를 기다리지 않고 무조건 `closeForm()`으로 모달을 닫아버려서 서버가 요청을 거부해도(예: 존재하지 않는 그룹명으로 세션 생성 시도 등) 화면엔 아무 표시 없이 모달만 닫히고 목록엔 반영이 안 됨 - "날짜/시간 수정 안 됨"도 이 패턴 때문이었을 가능성이 큼
+  - **수정**: `SessionsPage.tsx`에 `listUserGroups()` 연동 추가(`groupOptions` - `UsersPage.tsx`와 동일 패턴), 생성 폼 기본 선택 그룹도 `groupOptions[0]` 기준으로 변경. `createMutation`/`updateMutation`에 `onError` 추가(`SettingsPage.tsx`의 `extractError()`와 동일 패턴으로 서버 에러 메시지 표시), 모달은 성공(`onSuccess`)했을 때만 닫히도록 변경 - 실패하면 폼은 그대로 열려있고 에러 메시지만 표시
+  - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요 - 변경 파일: `pages/SessionsPage.tsx` (1개 파일만 수정)
+
 ## 다음 작업
 
-> 2026-08-20: STEP30에서 STEP27 §다음 작업 1~4번(비밀번호 변경/통계·대시보드 카드/필드명 확인)을 전부 마무리함. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
+> 2026-08-25: STEP31에서 세션 생성/수정 폼의 그룹 불일치 + 실패 시 무반응 버그를 수정함. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
