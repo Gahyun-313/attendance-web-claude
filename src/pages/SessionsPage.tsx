@@ -1,6 +1,10 @@
 // 출석 세션 관리 화면. 세션 목록을 조회/검색/필터링하고, 생성·수정·시작·종료할 수 있다.
 // 2026-07-23(STEP19): 로컬 시드 데이터 대신 실제 백엔드 API(GET/POST/PUT /api/sessions 등) 연동
+// 2026-08-25(STEP31): 그룹 select가 utils/groups.ts 하드코딩 목록만 쓰고 있어서 실제 그룹과 안 맞는 버그,
+// 생성/수정 요청이 실패해도 에러가 안 보이고 모달이 그냥 닫히는 버그 - 둘 다 수정. UsersPage.tsx가 이미 쓰던
+// listUserGroups() 연동 패턴 + SettingsPage.tsx의 extractError() 에러 표시 패턴을 그대로 가져옴
 import { useMemo, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -8,7 +12,9 @@ import { sessionStatusMeta } from '../utils/badgeColors'
 import { GROUPS } from '../utils/groups'
 import { closeSession, createSession, listSessions, startSession, updateSession } from '../api/sessions'
 import { listNfcTags } from '../api/nfcTags'
+import { listUserGroups } from '../api/users'
 import type { Session, SessionRequest, SessionStatus } from '../types/session'
+import type { ApiErrorResponse } from '../types/common'
 
 const STATUS_FILTERS: { value: SessionStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: '전체' },
@@ -59,6 +65,12 @@ const splitTime = (time: string): [string, string] => {
 // "시작 후 N분" 형태의 Session.lateThreshold에서 숫자만 뽑음
 const parseLateThreshold = (label: string): string => label.match(/\d+/)?.[0] ?? '10'
 
+// UsersPage.tsx의 extractError()와 같은 패턴 - 서버 에러 메시지(ApiErrorResponse.message)를 우선 보여줌
+const extractError = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError<ApiErrorResponse>(error)) return error.response?.data?.message ?? fallback
+  return fallback
+}
+
 const SessionsPage = () => {
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<SessionStatus | 'ALL'>('ALL')
@@ -67,6 +79,7 @@ const SessionsPage = () => {
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<SessionFormState>(emptyForm)
+  const [formError, setFormError] = useState<string | null>(null)
 
   // 상태/검색어를 서버로도 실제 전달 (§9 "상태/세션명 필터링"), 아래 filtered에서 한 번 더 걸러서 이중 안전망
   const sessionsQuery = useQuery({
@@ -74,15 +87,32 @@ const SessionsPage = () => {
     queryFn: () => listSessions({ status: statusFilter === 'ALL' ? undefined : statusFilter, keyword: search.trim() || undefined }),
   })
   const nfcTagsQuery = useQuery({ queryKey: ['nfcTags'], queryFn: () => listNfcTags() })
+  // 그룹은 utils/groups.ts 하드코딩 대신 실제 API(GET /api/users/groups)로 조회 - UsersPage.tsx와 동일한 패턴.
+  // API가 아직 안 왔거나 빈 배열이면 그때만 하드코딩 목록(GROUPS)을 폴백으로 사용
+  const groupsQuery = useQuery({ queryKey: ['userGroups'], queryFn: listUserGroups })
   const sessions = sessionsQuery.data ?? []
   const nfcTags = nfcTagsQuery.data ?? []
+  const groupOptions = groupsQuery.data && groupsQuery.data.length > 0 ? groupsQuery.data : GROUPS
 
   const invalidateSessions = () => queryClient.invalidateQueries({ queryKey: ['sessions'] })
 
-  const createMutation = useMutation({ mutationFn: createSession, onSuccess: invalidateSessions })
+  // 생성/수정 둘 다: 성공해야만 모달을 닫고(onSuccess), 실패하면 모달은 열어둔 채 에러 메시지만 보여줌(onError) -
+  // 예전엔 성공/실패 상관없이 제출하자마자 무조건 모달을 닫아서 실패해도 아무 표시 없이 그냥 안 됐던 것처럼 보였음
+  const createMutation = useMutation({
+    mutationFn: createSession,
+    onSuccess: () => {
+      invalidateSessions()
+      closeForm()
+    },
+    onError: (error) => setFormError(extractError(error, '세션 생성에 실패했어요')),
+  })
   const updateMutation = useMutation({
     mutationFn: ({ id, req }: { id: number; req: SessionRequest }) => updateSession(id, req),
-    onSuccess: invalidateSessions,
+    onSuccess: () => {
+      invalidateSessions()
+      closeForm()
+    },
+    onError: (error) => setFormError(extractError(error, '세션 수정에 실패했어요')),
   })
   const startMutation = useMutation({ mutationFn: startSession, onSuccess: invalidateSessions })
   const closeMutation = useMutation({ mutationFn: closeSession, onSuccess: invalidateSessions })
@@ -101,8 +131,10 @@ const SessionsPage = () => {
   const detailSession = sessions.find((s) => s.id === detailId) ?? null
 
   const openCreate = () => {
-    setForm(emptyForm)
+    // 기본 선택 그룹도 실제 그룹 목록 기준으로 (GROUPS[0]이 실제로 존재하지 않는 그룹일 수 있어서)
+    setForm({ ...emptyForm, group: groupOptions[0] ?? GROUPS[0] })
     setEditingId(null)
+    setFormError(null)
     setFormMode('create')
   }
 
@@ -120,13 +152,18 @@ const SessionsPage = () => {
       note: session.note,
     })
     setEditingId(session.id)
+    setFormError(null)
     setFormMode('edit')
   }
 
-  const closeForm = () => setFormMode(null)
+  const closeForm = () => {
+    setFormMode(null)
+    setFormError(null)
+  }
 
   const handleSubmitForm = (e: FormEvent) => {
     e.preventDefault()
+    setFormError(null)
     if (!form.name.trim() || !form.date.trim() || !form.startTime.trim() || !form.endTime.trim() || !form.nfcTagId) return
 
     const req: SessionRequest = {
@@ -147,7 +184,7 @@ const SessionsPage = () => {
     } else {
       createMutation.mutate(req)
     }
-    closeForm()
+    // closeForm()은 더 이상 여기서 무조건 호출하지 않음 - 각 mutation의 onSuccess에서만 호출
   }
 
   // 세션 시작/종료 - 실제 상태 전이 API(POST /api/sessions/:id/start, /close) 호출
@@ -292,7 +329,7 @@ const SessionsPage = () => {
             required
           />
           <Select label="그룹" value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))}>
-            {GROUPS.map((g) => (
+            {groupOptions.map((g) => (
               <option key={g} value={g}>
                 {g}
               </option>
@@ -361,11 +398,14 @@ const SessionsPage = () => {
               className="w-full resize-none rounded-lg border border-[#dcdfe4] bg-white px-3 py-2 font-sans text-[13px] text-[#1c1e21] placeholder:text-[#9aa1ac] focus:outline-none focus:ring-1 focus:ring-[oklch(55%_0.16_258)]"
             />
           </div>
-          <div className="mt-1 flex justify-end gap-2">
+          <div className="mt-1 flex items-center justify-end gap-2">
+            {formError && <span className="mr-auto text-[12.5px] text-red-600">{formError}</span>}
             <Button type="button" variant="secondary" onClick={closeForm}>
               취소
             </Button>
-            <Button type="submit">{formMode === 'edit' ? '저장' : '생성'}</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              {formMode === 'edit' ? '저장' : '생성'}
+            </Button>
           </div>
         </form>
       </Modal>
