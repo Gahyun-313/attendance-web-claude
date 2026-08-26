@@ -93,7 +93,7 @@ src/
 | 화면 | 상태 |
 |---|---|
 | 로그인 | ✅ 완료 (아이디/비밀번호 + 구글/카카오 소셜 로그인·가입 전부 실 연동 검증됨, 2026-07-25) |
-| 대시보드 | 🟡 카드4개 중 오늘세션수/진행중인세션/오늘출석률 3개 + 진행세션목록 실 API 연동(STEP30, STEP36), 나머지(활성사용자/차트 2종/최근출석표)는 대응 API 없어 빈 상태 |
+| 대시보드 | 🟡 카드4개 전부(오늘세션수/진행중인세션/오늘출석률/활성사용자) + 진행세션목록/최근출석표 실 API 연동(STEP30, STEP36, STEP37), 나머지(차트 2종)는 대응 필드 구조 미확인으로 보류 |
 | 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작, NFC태그 표시 버그 STEP30에서 수정, 삭제 버튼 STEP34에서 추가, 생성 버튼 무반응 버그 STEP35에서 수정) |
 | 출석 현황 | ✅ 완료 (필터 + 상태 수정 모달 동작) |
 | 사용자 관리 | ✅ 완료 (필터/검색 + 생성·상세·수정 모달 전부 동작) |
@@ -378,12 +378,19 @@ src/
   - **"진행 중인 세션" 목록 카드**: 이전엔 정적 문구("진행 중인 세션이 없습니다")만 있어서 바로 위 통계 카드(진행 중인 세션 1건)와 화면 안에서 서로 모순되게 보였음 - `listSessions({ status: 'ACTIVE' })`(`SessionsPage.tsx`가 쓰는 것과 동일한 API)로 실제 목록을 가져와 세션명/그룹/시간 + 상태 배지로 표시
   - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/DashboardPage.tsx`
   - 브랜치 생성부터 커밋/develop 머지까지 전부 Claude가 `device_bash`로 직접 처리. 사용자 실사용 재테스트는 아직 대기 중
+- STEP37 (2026-08-26, 완료): 대시보드 "오늘 출석률"(진짜 필드로 교체)/"활성 사용자"/"최근 출석 기록" 표 연동 (사용자 요청 - 백엔드 API 배포 완료 공지). 브랜치 `feat/step37-dashboard-active-users-recent`
+  - **"오늘 출석률" 카드**: `DashboardStatistics`에 신규 필드 `todayAttendanceRate` 추가 - STEP36에서 임시로 대체해 쓰던 `recentAttendanceRate`(최근 완료 세션 5개 평균, 라벨과 의미 불일치)를 해소하고 라벨 그대로 진짜 "오늘" 기준 값으로 교체. `recentAttendanceRate` 필드 자체는 `StatisticsPage.tsx`가 계속 쓰고 있어서 타입에서 제거하지 않고 유지
+  - **"활성 사용자" 카드**: 처음엔 신규 API로 오인해서 `api/users.ts`에 `getUserDashboard`/`UserDashboardStats`를 새로 선언했다가, `UsersPage.tsx`가 STEP29-3부터 이미 같은 `GET /api/users/dashboard`(`UserDashboardSummary`, 필드명 `activateUsers`)를 쓰고 있는 걸 뒤늦게 발견 - export 중복(동일 함수명 재선언)이라 `tsc`에서 바로 잡혔을 문제였음. 새로 만든 타입/함수를 지우고 기존 `getUserDashboard()`를 그대로 재사용하도록 정리
+  - **"최근 출석 기록" 표**: 신규 `GET /api/attendances/recent?limit=10` 연동. `api-specification.md`로 필드명 확정(`id/userId/userName/groupName/sessionId/sessionTitle/status/checkInTime`) - 응답이 `data` 자체가 배열인지 `{ recentAttendances: [...] }`로 한 번 더 감싸져 오는지는 명세에 명확히 안 나와있어서 방어적으로 둘 다 처리(`Array.isArray` 분기), 실제 응답 확인되면 정리 가능
+  - **이번 STEP에서 보류한 것**: "시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트 2개 - 백엔드가 필드 추가를 공지했지만 정확한 JSON 구조(특히 `HourlyCheckInCount`류 배열 형태)가 두 문서 어디에도 명시돼 있지 않아서, 추측해서 채웠다가 STEP30의 `groupRates`처럼 필드명이 틀려 조용히 빈 데이터로 남을 위험이 있다고 판단 - `DashboardStatisticsResponse.java`/`HourlyCheckInCount.java` 실 소스나 명확한 JSON 예시 확인 후 다음 STEP에서 진행하기로 함
+  - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/DashboardPage.tsx`, `types/statistics.ts`, `types/attendance.ts`, `api/attendances.ts`, `api/users.ts`(중복 선언 정리)
+  - 브랜치 생성부터 커밋/develop 머지까지 전부 Claude가 `device_bash`로 직접 처리(사용자 요청 - "알아서 진행해줘"). 사용자 실사용 재테스트는 아직 대기 중
 
 ## 다음 작업
 
-> 2026-08-26: 사용자가 리포트했던 버그 2건(세션 삭제 안 됨, 출석 미배정) 전부 최종 해결 확인 완료. STEP36에서 대시보드 일부(오늘 출석률/진행 중인 세션 목록) 추가 연동, 사용자 재테스트 대기. 남은 항목:
-> - **STEP36 실사용 재테스트**: "오늘 출석률"/"진행 중인 세션" 목록이 실제로 잘 나오는지 사용자 확인 필요
-> - **대시보드 나머지 항목 - 백엔드 신규 로직 필요**: "활성 사용자"/"시간대별 출석 체크 추이" 차트/"오늘 출석 상태 분포" 차트/"최근 출석 기록" 표 4개는 대응 API가 아직 없음. 필요한 백엔드 로직은 사용자에게 플레인텍스트로 정리해서 전달함(대화 기록 참고) - 요약: ①진짜 "오늘" 기준 출석률(현재 `recentAttendanceRate`는 최근 완료 세션 5개 평균이라 대체용일 뿐), ②"활성 사용자" 정의부터 필요(오늘 체크인한 사용자 수 vs 계정 활성 상태 수), ③세션 전체를 가로지르는 "최근 체크인 목록" API(현재 `/attendances/sessions/{id}`는 세션 단위 조회만 있음), ④시간대별/상태별 집계 API 2종. 전부 `DashboardStatisticsResponse`나 별도 엔드포인트에 필드 추가가 필요해서 백엔드 작업 필요 - 프론트는 대기
+> 2026-08-26: 사용자가 리포트했던 버그 2건(세션 삭제 안 됨, 출석 미배정) 전부 최종 해결 확인 완료. STEP36~37로 대시보드 카드4개(오늘세션수/진행중인세션/오늘출석률/활성사용자) + 진행세션목록/최근출석표까지 실 데이터 연동 완료, 사용자 재테스트 대기. 남은 항목:
+> - **STEP36~37 실사용 재테스트**: "오늘 출석률"/"활성 사용자"/"최근 출석 기록" 표가 실제로 잘 나오는지 사용자 확인 필요
+> - **대시보드 차트 2종 - 백엔드 필드 구조 확인 필요**: "시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트만 남음. 백엔드가 필드 추가는 공지했지만 정확한 JSON 구조가 아직 미확인 - `DashboardStatisticsResponse.java`/`HourlyCheckInCount.java` 실 소스나 명확한 JSON 예시 확보되면 바로 진행 가능
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
