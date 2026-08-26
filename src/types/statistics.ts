@@ -25,10 +25,18 @@ export interface GroupAttendanceRate {
 }
 
 // 2026-08-20 BE DashboardStatisticsResponse.java 소스로 필드명 확정
+// 2026-08-26(STEP37): 백엔드가 todayAttendanceRate 필드를 신규 추가(공지·api-specification.md로 필드명 확정) -
+// "오늘" 세션들(ACTIVE+COMPLETED)만 실시간 집계한 진짜 "오늘 출석률". 기존 recentAttendanceRate(최근 완료
+// 세션 5개 평균)는 그대로 유지 - 용도가 달라서 둘 다 씀.
+// 상태분포(present/late/absent/waiting)/hourlyCheckInTrend 필드도 이번에 같이 추가됐다고 공지는 받았지만
+// 정확한 JSON 필드명/구조가 아직 미확인(DashboardStatisticsResponse.java/HourlyCheckInCount.java 실 소스
+// 필요) - 이 프로젝트에서 이런 식으로 추측하고 넘어갔다가 필드명이 틀려서 조용히 빈 데이터로 남았던 전례가
+// 여러 번 있었어서(STEP30 groupRates 등) 여기 타입엔 아직 안 넣음. 확인되면 여기에 추가
 export interface DashboardStatistics {
   todaySessionCount: number
   activeSessionCount: number
   recentAttendanceRate: number // 최근 완료된 세션 5개의 평균 출석률
+  todayAttendanceRate: number // "오늘" sessionDate 기준 ACTIVE+COMPLETED 세션 실시간 집계 출석률 (STEP37)
   groupAttendanceRates: GroupAttendanceRate[] // 그룹별 누적 출석 현황 (완료된 세션 기준)
 }
 

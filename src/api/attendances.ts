@@ -4,7 +4,7 @@
 // optional 처리 + mapAttendance()에서 '-'로 대체하는 방어 로직 유지
 import axiosClient from './axiosClient'
 import type { ApiResponse, PageResponse } from '../types/common'
-import type { AttendanceDashboardStats, AttendanceRecord, AttendanceStatus, AttendanceStatusUpdateRequest } from '../types/attendance'
+import type { AttendanceDashboardStats, AttendanceRecord, AttendanceStatus, AttendanceStatusUpdateRequest, RecentAttendance } from '../types/attendance'
 import { unwrapListPayload } from '../utils/pageResponse'
 
 interface AttendanceResponseDto {
@@ -55,4 +55,17 @@ export const getAttendanceDashboard = async (sessionId: number): Promise<Attenda
     `/attendances/sessions/${sessionId}/dashboard`,
   )
   return data.data
+}
+
+// 대시보드 "최근 출석 기록" 표용 - 세션 구분 없이 단체 전체 최근 체크인 N건 (2026-08-26 백엔드 배포 완료
+// 공지, STEP37에서 연동). limit은 서버가 1~50 clamp, 기본 10.
+// 응답이 data 자체가 배열인지("사용자 목록조회"의 users(page)/"활성세션 조회"의 sessions[]처럼 이 문서 표기
+// 관례상 유력) 아니면 { recentAttendances: [...] } 로 한 번 더 감싸져 오는지 명세에 명확히 안 나와있어서
+// 방어적으로 둘 다 처리 (실제 응답 확인되면 이 방어 코드는 정리 가능)
+export const getRecentAttendances = async (limit = 10): Promise<RecentAttendance[]> => {
+  const { data } = await axiosClient.get<ApiResponse<RecentAttendance[] | { recentAttendances: RecentAttendance[] }>>(
+    '/attendances/recent',
+    { params: { limit } },
+  )
+  return Array.isArray(data.data) ? data.data : data.data.recentAttendances
 }

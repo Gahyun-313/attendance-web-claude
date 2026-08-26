@@ -36,3 +36,18 @@ export interface AttendanceDashboardStats {
   waiting: number
   attendanceRate: number
 }
+
+// 대시보드 "최근 출석 기록" 표용 - RecentAttendanceResponse. 2026-08-26(STEP37): 신규 GET /api/attendances/recent
+// (세션 구분 없이 단체 전체 최근 체크인 N건). api-specification.md로 필드명 확정
+// (id/userId/userName/groupName/sessionId/sessionTitle/status/checkInTime). WAITING(미체크인)은 checkInTime이
+// 없어 서버가 이미 제외하고 내려줌
+export interface RecentAttendance {
+  id: number
+  userId: number
+  userName: string
+  groupName: string
+  sessionId: number
+  sessionTitle: string
+  status: AttendanceStatus
+  checkInTime: string
+}

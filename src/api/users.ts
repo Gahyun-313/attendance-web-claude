@@ -79,6 +79,8 @@ export const activateUser = async (id: number): Promise<StudentAccount> => {
 }
 
 // 사용자 관리 화면 상단 요약 통계 (2026-08-18 BE 신규 API 공지로 확인됨 - 예전엔 MSW mock이었음).
+// 2026-08-26(STEP37): 대시보드 화면 "활성 사용자" 카드도 이 API를 그대로 재사용함(신규 API 아니었음 - 처음엔
+// 신규로 착각해서 getUserDashboard를 중복 선언할 뻔함, UsersPage.tsx에서 이미 쓰고 있던 걸 뒤늦게 확인).
 // activateUsers는 오타 아님 - 실제 API 필드명 그대로
 export interface UserDashboardSummary {
   totalUsers: number
