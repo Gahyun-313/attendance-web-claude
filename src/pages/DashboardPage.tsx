@@ -6,9 +6,13 @@
 // 2026-08-26(STEP37): 백엔드가 API 배포 완료(사용자 공지) - "오늘 출석률"을 진짜 todayAttendanceRate로
 // 교체(STEP36의 recentAttendanceRate 임시 대체 해소), "활성 사용자"는 GET /api/users/dashboard의 activateUsers로
 // 채움(UsersPage.tsx가 STEP25부터 이미 쓰던 기존 API를 재사용한 것 - 신규 API 아니었음), "최근 출석 기록" 표는
-// 신규 GET /api/attendances/recent로 채움. 시간대별 추이/오늘 상태분포 차트 2개는 여전히 대응 필드의 정확한
-// JSON 구조가 명세에 없어서(추측하면 STEP30 groupRates류 버그 재발 위험) 이번엔 보류 -
-// DashboardStatisticsResponse.java/HourlyCheckInCount.java 실 소스 확인되면 다음 STEP에서 채움
+// 신규 GET /api/attendances/recent로 채움. 시간대별 추이/오늘 상태분포 차트 2개는 이때는 대응 필드의 정확한
+// JSON 구조가 명세에 없어서 보류함
+// 2026-08-26(STEP38): 사용자가 api-specification.md에 GET /api/statistics/dashboard의 실제 응답 예시(JSON)를
+// 추가해줘서 남은 차트 2개 마저 연동 - "시간대별 출석 체크 추이"는 hourlyCheckInTrend[](09~21시 13개 고정,
+// {hour, count})로 막대그래프, "오늘 출석 상태 분포"는 todayPresentCount/todayLateCount/todayAbsentCount/
+// todayWaitingCount(flat 필드, 중첩 객체 아님)로 도넛+범례. 차트 라이브러리 없이 순수 SVG/CSS로 구현(이 프로젝트
+// 과설계 금지 원칙, 다른 화면도 전부 라이브러리 없이 직접 구현해옴)
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Card, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -53,6 +57,31 @@ const DashboardPage = () => {
   const recentAttendancesQuery = useQuery({ queryKey: ['attendances', 'recent'], queryFn: () => getRecentAttendances(10) })
   const recentAttendances = recentAttendancesQuery.data ?? []
 
+  // "시간대별 출석 체크 추이" 막대그래프용 (STEP38) - 09~21시 13개 고정, 막대 높이는 그 중 최댓값 대비 비율
+  const hourlyTrend = dashboard?.hourlyCheckInTrend ?? []
+  const maxHourlyCount = Math.max(1, ...hourlyTrend.map((h) => h.count))
+
+  // "오늘 출석 상태 분포" 도넛+범례용 (STEP38) - Badge 색상 체계와 동일한 톤으로 맞춤(utils/badgeColors.ts 참고)
+  const statusSegments = dashboard
+    ? [
+        { key: 'PRESENT', label: '출석', value: dashboard.todayPresentCount, color: 'oklch(42% 0.13 152)' },
+        { key: 'LATE', label: '지각', value: dashboard.todayLateCount, color: 'oklch(50% 0.14 75)' },
+        { key: 'ABSENT', label: '결석', value: dashboard.todayAbsentCount, color: 'oklch(48% 0.18 20)' },
+        { key: 'WAITING', label: '대기', value: dashboard.todayWaitingCount, color: '#9aa1ac' },
+      ]
+    : []
+  const statusTotal = statusSegments.reduce((sum, s) => sum + s.value, 0)
+  const DONUT_RADIUS = 40
+  const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS
+  let donutOffset = 0
+  const donutArcs = statusSegments.map((s) => {
+    const fraction = statusTotal > 0 ? s.value / statusTotal : 0
+    const arcLength = fraction * DONUT_CIRCUMFERENCE
+    const arc = { ...s, dasharray: `${arcLength} ${DONUT_CIRCUMFERENCE - arcLength}`, dashoffset: -donutOffset }
+    donutOffset += arcLength
+    return arc
+  })
+
   return (
     <>
       {/* ===== UI: 통계 카드 4개 - 4개 전부 실 데이터 (STEP37) ===== */}
@@ -79,17 +108,68 @@ const DashboardPage = () => {
         </Card>
       </div>
 
-      {/* ===== UI: 시간대별 바 차트 + 상태 분포 도넛 차트 - 데이터 없어서 빈 상태 문구만 표시 ===== */}
+      {/* ===== UI: 시간대별 바 차트 + 상태 분포 도넛 차트 - 둘 다 실 데이터 (STEP38) ===== */}
       <div className="grid grid-cols-[1.5fr_1fr] gap-4">
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">시간대별 출석 체크 추이</p>
           <p className="mb-4 text-xs text-[#9aa1ac]">오늘, 09시~21시</p>
-          <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          {dashboardQuery.isLoading ? (
+            <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">불러오는 중...</div>
+          ) : hourlyTrend.length === 0 ? (
+            <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          ) : (
+            <div className="flex h-[120px] items-end gap-[3px]">
+              {hourlyTrend.map((h) => (
+                <div key={h.hour} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                  <div
+                    className="w-full rounded-t-sm bg-[oklch(55%_0.16_258)]"
+                    style={{ height: `${Math.round((h.count / maxHourlyCount) * 88)}px` }}
+                    title={`${h.hour}시 ${h.count}건`}
+                  />
+                  <span className="text-[9px] leading-none text-[#9aa1ac]">{h.hour}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card>
           <p className="mb-4 text-sm font-bold text-[#1c1e21]">오늘 출석 상태 분포</p>
-          <div className="flex h-[110px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          {dashboardQuery.isLoading ? (
+            <div className="flex h-[110px] items-center justify-center text-xs text-[#9aa1ac]">불러오는 중...</div>
+          ) : !dashboard ? (
+            <div className="flex h-[110px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
+          ) : (
+            <div className="flex h-[110px] items-center gap-4">
+              <svg viewBox="0 0 100 100" className="h-[90px] w-[90px] shrink-0">
+                <circle cx="50" cy="50" r={DONUT_RADIUS} fill="none" stroke="#f1f2f4" strokeWidth="14" />
+                {statusTotal > 0 &&
+                  donutArcs.map((a) => (
+                    <circle
+                      key={a.key}
+                      cx="50"
+                      cy="50"
+                      r={DONUT_RADIUS}
+                      fill="none"
+                      stroke={a.color}
+                      strokeWidth="14"
+                      strokeDasharray={a.dasharray}
+                      strokeDashoffset={a.dashoffset}
+                      transform="rotate(-90 50 50)"
+                    />
+                  ))}
+              </svg>
+              <ul className="flex flex-col gap-1.5">
+                {statusSegments.map((s) => (
+                  <li key={s.key} className="flex items-center gap-1.5 text-xs">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+                    <span className="text-[#6b7280]">{s.label}</span>
+                    <span className="font-semibold text-[#1c1e21]">{s.value}명</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Card>
       </div>
 
