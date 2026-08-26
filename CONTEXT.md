@@ -93,7 +93,7 @@ src/
 | 화면 | 상태 |
 |---|---|
 | 로그인 | ✅ 완료 (아이디/비밀번호 + 구글/카카오 소셜 로그인·가입 전부 실 연동 검증됨, 2026-07-25) |
-| 대시보드 | 🟡 카드4개 전부(오늘세션수/진행중인세션/오늘출석률/활성사용자) + 진행세션목록/최근출석표 실 API 연동(STEP30, STEP36, STEP37), 나머지(차트 2종)는 대응 필드 구조 미확인으로 보류 |
+| 대시보드 | ✅ 완료 (카드4개/진행세션목록/최근출석표/차트2종(시간대별 추이·오늘 상태분포) 전부 실 API 연동, STEP30·STEP36·STEP37·STEP38) |
 | 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작, NFC태그 표시 버그 STEP30에서 수정, 삭제 버튼 STEP34에서 추가, 생성 버튼 무반응 버그 STEP35에서 수정) |
 | 출석 현황 | ✅ 완료 (필터 + 상태 수정 모달 동작) |
 | 사용자 관리 | ✅ 완료 (필터/검색 + 생성·상세·수정 모달 전부 동작) |
@@ -385,12 +385,18 @@ src/
   - **이번 STEP에서 보류한 것**: "시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트 2개 - 백엔드가 필드 추가를 공지했지만 정확한 JSON 구조(특히 `HourlyCheckInCount`류 배열 형태)가 두 문서 어디에도 명시돼 있지 않아서, 추측해서 채웠다가 STEP30의 `groupRates`처럼 필드명이 틀려 조용히 빈 데이터로 남을 위험이 있다고 판단 - `DashboardStatisticsResponse.java`/`HourlyCheckInCount.java` 실 소스나 명확한 JSON 예시 확인 후 다음 STEP에서 진행하기로 함
   - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/DashboardPage.tsx`, `types/statistics.ts`, `types/attendance.ts`, `api/attendances.ts`, `api/users.ts`(중복 선언 정리)
   - 브랜치 생성부터 커밋/develop 머지까지 전부 Claude가 `device_bash`로 직접 처리(사용자 요청 - "알아서 진행해줘"). 사용자 실사용 재테스트는 아직 대기 중
+- STEP38 (2026-08-26, 완료): 대시보드 "시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트 2개 연동 (사용자가 `apispecification.md`에 `GET /api/statistics/dashboard` 실제 응답 예시 JSON을 추가해줘서 STEP37에서 보류했던 마지막 항목 진행). 브랜치 `feat/step38-dashboard-charts`
+  - **필드 구조 확정**: STEP37에서 우려했던 대로 처음 추정(`todayStatusDistribution: {present, late, absent, waiting}` 같은 중첩 객체)은 틀렸음 - 실제로는 `todayPresentCount`/`todayLateCount`/`todayAbsentCount`/`todayWaitingCount` 4개의 flat 필드. `hourlyCheckInTrend[]`는 09~21시 13개 항목이 항상 고정으로 오고(빈 시간대도 `count: 0`으로 포함), 필드명은 `hour`/`count`. `types/statistics.ts`의 `DashboardStatistics`에 전부 추가하고 `HourlyCheckInCount` 타입 신규 정의
+  - **"시간대별 출석 체크 추이"**: `hourlyCheckInTrend`를 막대그래프로 표시, 막대 높이는 13개 중 최댓값 대비 비율로 계산
+  - **"오늘 출석 상태 분포"**: `today*Count` 4개로 SVG 도넛 차트 + 범례 구현. 색상은 `utils/badgeColors.ts`의 출석 상태 배지 색 톤과 동일하게 맞춤 - 별도 차트 라이브러리는 안 쓰고 순수 SVG(`stroke-dasharray`/`stroke-dashoffset`)와 CSS로 직접 구현(이 프로젝트 과설계 금지 원칙 - 다른 화면들도 전부 라이브러리 없이 직접 구현해옴)
+  - `npx tsc --noEmit` 통과 확인. 변경 파일: `types/statistics.ts`, `pages/DashboardPage.tsx`
+  - 브랜치 생성부터 커밋/develop 머지까지 전부 Claude가 `device_bash`로 직접 처리. 이걸로 대시보드 화면에 남아있던 마지막 빈 항목까지 전부 실 데이터 연동 완료. 사용자 실사용 재테스트는 아직 대기 중
 
 ## 다음 작업
 
-> 2026-08-26: 사용자가 리포트했던 버그 2건(세션 삭제 안 됨, 출석 미배정) 전부 최종 해결 확인 완료. STEP36~37로 대시보드 카드4개(오늘세션수/진행중인세션/오늘출석률/활성사용자) + 진행세션목록/최근출석표까지 실 데이터 연동 완료, 사용자 재테스트 대기. 남은 항목:
-> - **STEP36~37 실사용 재테스트**: "오늘 출석률"/"활성 사용자"/"최근 출석 기록" 표가 실제로 잘 나오는지 사용자 확인 필요
-> - **대시보드 차트 2종 - 백엔드 필드 구조 확인 필요**: "시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트만 남음. 백엔드가 필드 추가는 공지했지만 정확한 JSON 구조가 아직 미확인 - `DashboardStatisticsResponse.java`/`HourlyCheckInCount.java` 실 소스나 명확한 JSON 예시 확보되면 바로 진행 가능
+> 2026-08-26: 사용자가 리포트했던 버그 2건(세션 삭제 안 됨, 출석 미배정) 전부 최종 해결 확인 완료. STEP36~38로 대시보드 화면이 카드4개/진행세션목록/최근출석표/차트2종까지 전부 실 데이터 연동 완료 - 이제 대시보드에 빈 항목/placeholder가 하나도 안 남음. 사용자 재테스트 대기. 남은 항목:
+> - **STEP36~38 실사용 재테스트**: "오늘 출석률"/"활성 사용자"/"최근 출석 기록" 표/"시간대별 출석 체크 추이"/"오늘 출석 상태 분포" 차트가 실제로 잘 나오는지 사용자 확인 필요
+> - 대시보드 관련 남은 백엔드 의존 작업 없음 - 7개 메인 화면 전부 실 API 연동 완료 상태
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
