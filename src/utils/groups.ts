@@ -1,3 +1,6 @@
-// 앱 전체에서 쓰는 그룹 목록 - Claude Design 목업의 사용자 관리 화면(Add User 모달) 기준
-// TODO: 실제로는 그룹도 백엔드 API(GET /api/groups 등)로 관리될 확률이 높음 - 지금은 고정 목록
-export const GROUPS = ['개발1팀', '스터디 A조', '스터디 B조', '스터디 C조', 'CS스터디팀']
+// 2026-08-26(STEP32)부터 미사용 - deprecated.
+// 예전엔 그룹 select에 쓰던 하드코딩 목록(GROUPS)이었는데, BE 그룹 마스터 API(GET/POST/PUT/DELETE /api/groups)가
+// 생기면서 SessionsPage.tsx/UsersPage.tsx가 api/groups.ts의 listGroups()로 전환함 - 더 이상 이 파일을 import하는
+// 곳이 없음. Claude가 디바이스 브리지로는 파일을 삭제할 수 없어서(delete 권한 없음) 내용만 비워둠 - 완전히
+// 지우고 싶으면 이 파일(src/utils/groups.ts)을 직접 삭제해도 무방함.
+export {}

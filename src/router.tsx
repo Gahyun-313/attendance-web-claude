@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import SessionsPage from './pages/SessionsPage'
 import AttendancePage from './pages/AttendancePage'
+import GroupsPage from './pages/GroupsPage'
 import UsersPage from './pages/UsersPage'
 import NfcTagsPage from './pages/NfcTagsPage'
 import StatisticsPage from './pages/StatisticsPage'
@@ -23,6 +24,8 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage />, handle: { title: '대시보드' } },
       { path: 'sessions', element: <SessionsPage />, handle: { title: '출석 세션 관리' } },
       { path: 'attendance', element: <AttendancePage />, handle: { title: '출석 현황' } },
+      // 2026-08-26(STEP32) 신규 - BE 그룹 마스터 API(GET/POST/PUT/DELETE /api/groups) 추가로 생긴 화면
+      { path: 'groups', element: <GroupsPage />, handle: { title: '그룹 관리' } },
       { path: 'users', element: <UsersPage />, handle: { title: '사용자 관리' } },
       { path: 'nfc-tags', element: <NfcTagsPage />, handle: { title: 'NFC 태그 관리' } },
       { path: 'statistics', element: <StatisticsPage />, handle: { title: '통계' } },

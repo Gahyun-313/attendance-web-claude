@@ -349,15 +349,23 @@ src/
   - **수정**: `SessionsPage.tsx`에 `listUserGroups()` 연동 추가(`groupOptions` - `UsersPage.tsx`와 동일 패턴), 생성 폼 기본 선택 그룹도 `groupOptions[0]` 기준으로 변경. `createMutation`/`updateMutation`에 `onError` 추가(`SettingsPage.tsx`의 `extractError()`와 동일 패턴으로 서버 에러 메시지 표시), 모달은 성공(`onSuccess`)했을 때만 닫히도록 변경 - 실패하면 폼은 그대로 열려있고 에러 메시지만 표시
   - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요 - 변경 파일: `pages/SessionsPage.tsx` (1개 파일만 수정)
 
+- STEP32 (2026-08-26, 완료): BE가 그룹(Group) 마스터 엔티티+API를 신규 구현(`GET/POST/PUT/DELETE /api/groups`, `api-specification.md` §9) - User/Session의 `groupName`은 여전히 문자열이지만 이제 그룹 마스터에 없는 이름이면 사용자/세션 생성·수정이 G001로 거부됨. 그룹 관리 화면 신설 + 관련 화면 전환. 브랜치 `feat/step32-group-master-integration`
+  - **`types/group.ts`/`api/groups.ts` 신규**: `Group`(id/name/description/createdAt/updatedAt), `GroupRequest`(name/description). `listGroups`/`createGroup`/`updateGroup`/`deleteGroup` 4종
+  - **`GroupsPage.tsx` 신규**: 그룹 목록 표 + 생성/수정 모달 + 삭제(영구 삭제라 `window.confirm`으로 확인 - 소속 사용자/세션은 안 지워지고 groupName만 초기화된다는 실제 백엔드 동작을 안내 문구에 그대로 반영). `router.tsx`(`/groups`)·`Layout.tsx`(NAV_ITEMS) 등록
+  - **`SessionsPage.tsx`/`UsersPage.tsx` 그룹 select 전환**: `GET /api/users/groups`(STEP31에서 썼던, "사용중인" 그룹) 대신 `GET /api/groups`(그룹 마스터, "등록된" 그룹)로 전환 - `utils/groups.ts` 하드코딩 폴백도 완전히 삭제(그룹이 없으면 `/groups`에서 먼저 만들면 됨, 더 이상 가짜 값으로 안 가림). `utils/groups.ts` 파일 자체는 Claude가 디바이스 브리지로 파일을 삭제할 수 없어서 내용만 비우고 deprecated 주석만 남김 - 완전히 지우려면 사용자가 직접 삭제해야 함
+  - **`UsersPage.tsx` 생성/수정 실패 표시 버그도 같이 수정**: `SessionsPage.tsx`(STEP31)와 똑같이 `createMutation`/`updateMutation`에 `onError`가 없고 무조건 모달을 닫던 버그였음 - 같은 패턴(`extractError`, 성공시에만 닫힘)으로 수정
+  - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요 - 변경/신규 파일: `types/group.ts`(신규), `api/groups.ts`(신규), `pages/GroupsPage.tsx`(신규), `router.tsx`, `components/Layout.tsx`, `pages/SessionsPage.tsx`, `pages/UsersPage.tsx`, `utils/groups.ts`(내용만 비움)
+  - **워크플로 변경**: 사용자가 이번 STEP부터 브랜치 생성/커밋/머지까지 Claude가 직접 처리하도록 요청(기존엔 안내만 하고 사용자가 로컬에서 직접 실행) - 상세는 아래 §결정 사항 히스토리 참고
+
 ## 다음 작업
 
-> 2026-08-25: STEP31에서 세션 생성/수정 폼의 그룹 불일치 + 실패 시 무반응 버그를 수정함. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
+> 2026-08-26: STEP32에서 그룹 마스터 API 연동 완료(GroupsPage 신설 + 세션/사용자 그룹 select 전환). 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
 - 배포 도메인으로 소셜 로그인 쓸 계획이면 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 등록 필요
 - 로컬 전용이라 여기서 확인 불가: 실제 `npm run build` 최종 검증, ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단)
-- 로컬에 실제 git 저장소가 있으니, 매 STEP마다 브랜치명/코드/커밋 메시지만 안내하고 사용자가 직접 로컬에서 커밋하는 방식 계속 유지 (샌드박스가 마운트된 D 드라이브에서 delete가 필요한 git 명령은 FUSE 마운트 제약으로 계속 실패함)
+- (STEP32부터 변경) 브랜치 생성/커밋/머지/푸시를 Claude가 `device_bash`로 직접 실행 - 단, 샌드박스가 마운트된 D 드라이브는 FUSE 제약으로 파일 delete/unlink가 안 돼서, git이 내부적으로 index.lock을 정리 못 하고 남기는 경우가 실제로 관찰됨(커밋 자체는 됐었음). 매 git 명령 뒤에 `git status`/`git log`로 실제 반영됐는지 재확인 필수, 문제 생기면 사용자에게 수동 정리(`.git/index.lock` 삭제 등) 요청
 
 ## 결정 사항 히스토리
 
@@ -375,3 +383,4 @@ src/
 - 2026-07-23: `Table`/`Modal`을 STEP4의 임의 톤에서 STEP7에 확보한 목업 실측 토큰으로 교체 — Table이 자체 카드 프레임(테두리/radius/그림자)을 갖게 되면서, 화면에서 Table을 Card로 다시 감싸면 카드 속 카드가 되므로 그렇게 쓰지 않기로 함
 - 2026-07-23: `tsconfig.json`에 실제 버그 2건(`baseUrl`/`paths` deprecated, `lib`가 ES2020이라 `Array.prototype.at()` 타입 에러) 존재했던 걸 STEP7에서 최초로 `npx tsc --noEmit`을 돌려보고서야 발견 — 사용자 로컬에 `node_modules`가 생긴 이후부터는 코드 작성 시 가능하면 매번 타입체크까지 확인하기로 함
 - 2026-07-23: `Badge`는 도메인 결합적인 `status` prop 대신 순수 프레젠테이션 `color` prop으로 확정, 도메인→색상 매핑은 화면/유틸 레벨(`badgeColors.ts`)에서 담당하기로 함 — 목업의 `badge(kind, key)` 헬퍼 패턴을 따름
+- 2026-08-26(STEP32): 2026-07-23에 확정했던 "git 커밋/브랜치는 사용자가 직접 로컬에서" 방식을 사용자 요청으로 뒤집음 - 이제 브랜치 생성/커밋/머지/푸시까지 Claude가 `device_bash`로 직접 실행. 단 그 결정의 원인이었던 FUSE unlink 제약 자체가 없어진 건 아니라서(이 STEP 작업 중에도 `.git/index.lock`이 정리 안 되고 남는 게 실제로 관찰됨, 커밋 자체는 정상적으로 됨), 매 명령 뒤에 `git status`/`git log`로 실제 반영 여부를 재확인하는 걸 필수로 함 - 조용히 실패하고 다음 단계로 넘어가지 않도록

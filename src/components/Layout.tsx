@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { to: '/', label: '대시보드', end: true },
   { to: '/sessions', label: '출석 세션 관리' },
   { to: '/attendance', label: '출석 현황' },
+  { to: '/groups', label: '그룹 관리' }, // 2026-08-26(STEP32) 신규 - BE 그룹 마스터 API 추가로 생긴 화면
   { to: '/users', label: '사용자 관리' },
   { to: '/nfc-tags', label: 'NFC 태그 관리' },
   { to: '/statistics', label: '통계' },
