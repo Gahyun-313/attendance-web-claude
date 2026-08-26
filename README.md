@@ -14,7 +14,9 @@ NFC 기반 출석 관리 시스템의 관리자용 Web 대시보드입니다.
 | 로그인 | 대시보드 | 세션 관리 | 출석 현황 |
 | --- | --- | --- | --- |
 | <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/9e4b8264-6bb2-4a2e-a1e6-93a8a412b525" />
- | `<대시보드 화면 첨부>` | `<세션 관리 화면 첨부>` | `<출석 현황 화면 첨부>` |
+ | `<대시보드 화면 첨부>` | <img width="960" height="564" alt="image" src="https://github.com/user-attachments/assets/d82e55d2-22a3-4a17-85f6-f6269006e59f" />
+ | <img width="960" height="564" alt="image" src="https://github.com/user-attachments/assets/252e685c-76bf-4331-bbd9-634c6a6e6595" />
+ |
 | 일반·Google·Kakao 로그인과 비밀번호 재설정 | 오늘 세션과 진행 중인 세션 요약 | 세션 검색·생성·수정 및 상태 전이 | 출석 목록 필터와 상태 수정 |
 
 | 사용자 관리 | NFC 태그 관리 | 알림 | 설정 |
