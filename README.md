@@ -13,19 +13,12 @@ NFC 기반 출석 관리 시스템의 관리자용 Web 대시보드입니다.
 
 | 로그인 | 대시보드 | 세션 관리 | 출석 현황 |
 | --- | --- | --- | --- |
-| <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/9e4b8264-6bb2-4a2e-a1e6-93a8a412b525" />
- | `<대시보드 화면 첨부>` | <img width="960" height="564" alt="image" src="https://github.com/user-attachments/assets/d82e55d2-22a3-4a17-85f6-f6269006e59f" />
- | <img width="960" height="564" alt="image" src="https://github.com/user-attachments/assets/252e685c-76bf-4331-bbd9-634c6a6e6595" />
- |
+| <img src="https://github.com/user-attachments/assets/9e4b8264-6bb2-4a2e-a1e6-93a8a412b525" width="240" alt="로그인 화면"> | <img src="https://github.com/user-attachments/assets/e350973d-8472-4114-bc31-e3a8f1e7f956" width="240" alt="대시보드 화면"> | <img src="https://github.com/user-attachments/assets/d82e55d2-22a3-4a17-85f6-f6269006e59f" width="240" alt="세션 관리 화면"> | <img src="https://github.com/user-attachments/assets/252e685c-76bf-4331-bbd9-634c6a6e6595" width="240" alt="출석 현황 화면"> |
 | 일반·Google·Kakao 로그인과 비밀번호 재설정 | 오늘 세션과 진행 중인 세션 요약 | 세션 검색·생성·수정 및 상태 전이 | 출석 목록 필터와 상태 수정 |
 
 | 사용자 관리 | NFC 태그 관리 | 알림 | 설정 |
 | --- | --- | --- | --- |
-| <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/29826941-00a7-4f90-9fb1-a863a08198a5" />
- | <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/2082f066-b152-4268-a192-d71fa9de0b2d" />
- | <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/f34e2293-0c4c-4395-9355-ee86a4c75a7c" (알림) />
- | <img width="1920" height="1127" alt="image" src="https://github.com/user-attachments/assets/b47b99ce-3123-4dde-878c-5c59da09a200" /> (설정)
- |
+| <img src="https://github.com/user-attachments/assets/29826941-00a7-4f90-9fb1-a863a08198a5" width="240" alt="사용자 관리 화면"> | <img src="https://github.com/user-attachments/assets/2082f066-b152-4268-a192-d71fa9de0b2d" width="240" alt="NFC 태그 관리 화면"> | <img src="https://github.com/user-attachments/assets/f34e2293-0c4c-4395-9355-ee86a4c75a7c" width="240" alt="알림 관리 화면"> | <img src="https://github.com/user-attachments/assets/b47b99ce-3123-4dde-878c-5c59da09a200" width="240" alt="설정 화면"> |
 | 계정 생성·수정·비활성화·재활성화 | 태그 등록·수정과 활성 상태 관리 | 알림 관리 | 조직·계정 설정 |
 
 ## 📌 프로젝트 정보
