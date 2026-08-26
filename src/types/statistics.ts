@@ -31,10 +31,11 @@ export interface GroupAttendanceRate {
 // 2026-08-26(STEP38): 상태분포/hourlyCheckInTrend 필드명·구조를 api-specification.md 실제 응답 예시
 // (DashboardStatisticsResponse.java/HourlyCheckInCount.java 기준)로 확정해서 추가함 - STEP37 때 우려했던 대로
 // 처음 추정("todayStatusDistribution: {present, late, absent, waiting}" 같은 중첩 객체)은 틀렸었고, 실제로는
-// todayPresentCount/todayLateCount/todayAbsentCount/todayWaitingCount 4개의 flat 필드로 옴. hourlyCheckInTrend는
-// 09~21시 13개 항목이 항상 고정으로 오고(빈 시간대도 count:0으로 포함), 항목 필드명은 hour/count
+// todayPresentCount/todayLateCount/todayAbsentCount/todayWaitingCount 4개의 flat 필드로 옴.
+// 2026-08-26(STEP39): 백엔드가 hourlyCheckInTrend의 시간 범위를 09~21시(13개)에서 0~23시 하루 전체(24개)로
+// 변경(사용자 요청·api-specification.md 갱신) - 항목 개수/범위만 바뀌고 필드명(hour/count) 구조는 동일
 export interface HourlyCheckInCount {
-  hour: number // 9~21
+  hour: number // 0~23 (STEP39부터 하루 전체)
   count: number
 }
 
@@ -47,7 +48,7 @@ export interface DashboardStatistics {
   todayLateCount: number // (STEP38)
   todayAbsentCount: number // (STEP38)
   todayWaitingCount: number // (STEP38)
-  hourlyCheckInTrend: HourlyCheckInCount[] // 09~21시 시간대별 체크인 건수, 13개 고정 (STEP38)
+  hourlyCheckInTrend: HourlyCheckInCount[] // 0~23시 시간대별 체크인 건수, 24개 고정 (STEP38, 범위는 STEP39에서 0~23시로 확장)
   groupAttendanceRates: GroupAttendanceRate[] // 그룹별 누적 출석 현황 (완료된 세션 기준)
 }
 

@@ -9,10 +9,13 @@
 // 신규 GET /api/attendances/recent로 채움. 시간대별 추이/오늘 상태분포 차트 2개는 이때는 대응 필드의 정확한
 // JSON 구조가 명세에 없어서 보류함
 // 2026-08-26(STEP38): 사용자가 api-specification.md에 GET /api/statistics/dashboard의 실제 응답 예시(JSON)를
-// 추가해줘서 남은 차트 2개 마저 연동 - "시간대별 출석 체크 추이"는 hourlyCheckInTrend[](09~21시 13개 고정,
-// {hour, count})로 막대그래프, "오늘 출석 상태 분포"는 todayPresentCount/todayLateCount/todayAbsentCount/
-// todayWaitingCount(flat 필드, 중첩 객체 아님)로 도넛+범례. 차트 라이브러리 없이 순수 SVG/CSS로 구현(이 프로젝트
-// 과설계 금지 원칙, 다른 화면도 전부 라이브러리 없이 직접 구현해옴)
+// 추가해줘서 남은 차트 2개 마저 연동 - "시간대별 출석 체크 추이"는 hourlyCheckInTrend[]({hour, count})로
+// 막대그래프, "오늘 출석 상태 분포"는 todayPresentCount/todayLateCount/todayAbsentCount/todayWaitingCount(flat
+// 필드, 중첩 객체 아님)로 도넛+범례. 차트 라이브러리 없이 순수 SVG/CSS로 구현(이 프로젝트 과설계 금지 원칙,
+// 다른 화면도 전부 라이브러리 없이 직접 구현해옴)
+// 2026-08-26(STEP39): 백엔드가 hourlyCheckInTrend 범위를 09~21시(13개)에서 0~23시 하루 전체(24개)로 변경
+// (사용자 요청) - 라벨 문구를 "00시~23시"로 바꾸고, 막대가 24개로 늘어난 만큼 시간 라벨은 혼잡해지지 않도록
+// 3시간 간격(0/3/6/9/12/15/18/21)에만 표시(막대 자체는 24개 전부 표시, title 툴팁으로 개별 시간 확인 가능)
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Card, Table } from '../components'
 import type { TableColumn } from '../components'
@@ -112,13 +115,13 @@ const DashboardPage = () => {
       <div className="grid grid-cols-[1.5fr_1fr] gap-4">
         <Card>
           <p className="text-sm font-bold text-[#1c1e21]">시간대별 출석 체크 추이</p>
-          <p className="mb-4 text-xs text-[#9aa1ac]">오늘, 09시~21시</p>
+          <p className="mb-4 text-xs text-[#9aa1ac]">오늘, 00시~23시</p>
           {dashboardQuery.isLoading ? (
             <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">불러오는 중...</div>
           ) : hourlyTrend.length === 0 ? (
             <div className="flex h-[120px] items-center justify-center text-xs text-[#9aa1ac]">데이터가 없습니다</div>
           ) : (
-            <div className="flex h-[120px] items-end gap-[3px]">
+            <div className="flex h-[120px] items-end gap-[2px]">
               {hourlyTrend.map((h) => (
                 <div key={h.hour} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                   <div
@@ -126,7 +129,7 @@ const DashboardPage = () => {
                     style={{ height: `${Math.round((h.count / maxHourlyCount) * 88)}px` }}
                     title={`${h.hour}시 ${h.count}건`}
                   />
-                  <span className="text-[9px] leading-none text-[#9aa1ac]">{h.hour}</span>
+                  <span className="text-[9px] leading-none text-[#9aa1ac]">{h.hour % 3 === 0 ? h.hour : ''}</span>
                 </div>
               ))}
             </div>
