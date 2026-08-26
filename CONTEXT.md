@@ -365,7 +365,7 @@ src/
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
 - 배포 도메인으로 소셜 로그인 쓸 계획이면 로컬 `localhost:5173`뿐 아니라 배포 도메인도 구글/카카오 콘솔에 등록 필요
 - 로컬 전용이라 여기서 확인 불가: 실제 `npm run build` 최종 검증, ESLint/Prettier 설치(샌드박스 npm 레지스트리 차단)
-- (STEP32부터 변경) 브랜치 생성/커밋/머지/푸시를 Claude가 `device_bash`로 직접 실행 - 단, 샌드박스가 마운트된 D 드라이브는 FUSE 제약으로 파일 delete/unlink가 안 돼서, git이 내부적으로 index.lock을 정리 못 하고 남기는 경우가 실제로 관찰됨(커밋 자체는 됐었음). 매 git 명령 뒤에 `git status`/`git log`로 실제 반영됐는지 재확인 필수, 문제 생기면 사용자에게 수동 정리(`.git/index.lock` 삭제 등) 요청
+- (STEP32부터 변경) 브랜치 생성/커밋/머지는 Claude가 `device_bash`로 직접 실행, **푸시만 사용자가 로컬 터미널에서 직접** - `device_bash`는 네트워크 접근 자체가 없어서 `git push`가 원천적으로 안 됨(403). 커밋까지는 index.lock이 정리 안 되고 남는 경우가 실제로 관찰됐지만(rename으로 우회 가능, 커밋 자체는 정상적으로 됨) 큰 문제는 없었음. `git checkout <다른 브랜치>`처럼 기존 파일 내용을 갈아끼워야 하는 명령은 여전히 FUSE unlink 제약으로 실패함(STEP32에서 실제로 겪음, `git reset`으로 안전 복구) - develop 머지는 checkout 없이 `commit-tree`+`update-ref`로 우회. 매 git 명령 뒤에 `git status`/`git log`로 실제 반영됐는지 재확인 필수
 
 ## 결정 사항 히스토리
 
