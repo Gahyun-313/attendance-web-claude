@@ -136,8 +136,11 @@ const SessionsPage = () => {
   const detailSession = sessions.find((s) => s.id === detailId) ?? null
 
   const openCreate = () => {
-    // 기본 선택 그룹도 실제 그룹 마스터 목록 기준 - 그룹이 하나도 없으면 빈 문자열(select도 비어있음)
-    setForm({ ...emptyForm, group: groupOptions[0] ?? '' })
+    // 기본 선택 그룹/NFC 태그 둘 다 실제 목록 기준으로 채움 - 하나도 없으면 빈 문자열(select도 비어있음).
+    // NFC 태그를 안 채우면(예전 버그): <select>의 실제 <option>들은 전부 진짜 태그 id뿐이라 value=''가
+    // 매칭이 안 되고, 브라우저가 화면엔 첫 번째 태그를 선택된 것처럼 보여주면서도 React state(form.nfcTagId)는
+    // 계속 ''로 남는 컨트롤드 셀렉트 버그가 생김 - handleSubmitForm의 필수값 가드에 걸려 제출 자체가 조용히 씹힘
+    setForm({ ...emptyForm, group: groupOptions[0] ?? '', nfcTagId: nfcTags[0] ? String(nfcTags[0].id) : '' })
     setEditingId(null)
     setFormError(null)
     setFormMode('create')
@@ -169,7 +172,12 @@ const SessionsPage = () => {
   const handleSubmitForm = (e: FormEvent) => {
     e.preventDefault()
     setFormError(null)
-    if (!form.name.trim() || !form.date.trim() || !form.startTime.trim() || !form.endTime.trim() || !form.nfcTagId) return
+    // 예전엔 여기서 조용히 return만 해서, 값이 비어도 아무 반응 없이 그냥 무시됐음(버튼 눌러도 무반응처럼 보이는 버그의
+    // 일부 원인) - 이제 어떤 값이 비었는지 안내 메시지를 띄움
+    if (!form.name.trim() || !form.date.trim() || !form.startTime.trim() || !form.endTime.trim() || !form.nfcTagId) {
+      setFormError('필수 항목(세션명/날짜/시작·종료 시간/NFC 태그)을 모두 입력해주세요')
+      return
+    }
 
     const req: SessionRequest = {
       title: form.name.trim(),
