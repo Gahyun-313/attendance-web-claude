@@ -1,18 +1,20 @@
 // 출석 세션 관리 화면. 세션 목록을 조회/검색/필터링하고, 생성·수정·시작·종료할 수 있다.
 // 2026-07-23(STEP19): 로컬 시드 데이터 대신 실제 백엔드 API(GET/POST/PUT /api/sessions 등) 연동
 // 2026-08-25(STEP31): 그룹 select가 utils/groups.ts 하드코딩 목록만 쓰고 있어서 실제 그룹과 안 맞는 버그,
-// 생성/수정 요청이 실패해도 에러가 안 보이고 모달이 그냥 닫히는 버그 - 둘 다 수정. UsersPage.tsx가 이미 쓰던
-// listUserGroups() 연동 패턴 + SettingsPage.tsx의 extractError() 에러 표시 패턴을 그대로 가져옴
+// 생성/수정 요청이 실패해도 에러가 안 보이고 모달이 그냥 닫히는 버그 - 둘 다 수정.
+// 2026-08-26(STEP32): BE가 그룹 마스터 API(GET/POST/PUT/DELETE /api/groups)를 신규 구현하면서 groupName이
+// 마스터에 없으면 세션 생성/수정이 G001로 거부되도록 바뀜 - 그룹 select를 GET /api/users/groups("사용중인"
+// 그룹, STEP31에서 썼던 것) 대신 GET /api/groups("등록된" 마스터 그룹)로 전환. utils/groups.ts 하드코딩
+// 폴백도 이제 완전히 삭제(그룹이 없으면 /groups 화면에서 먼저 만들면 됨 - 더 이상 가짜 값으로 안 가림)
 import { useMemo, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { sessionStatusMeta } from '../utils/badgeColors'
-import { GROUPS } from '../utils/groups'
 import { closeSession, createSession, listSessions, startSession, updateSession } from '../api/sessions'
 import { listNfcTags } from '../api/nfcTags'
-import { listUserGroups } from '../api/users'
+import { listGroups } from '../api/groups'
 import type { Session, SessionRequest, SessionStatus } from '../types/session'
 import type { ApiErrorResponse } from '../types/common'
 
@@ -46,7 +48,7 @@ interface SessionFormState {
 
 const emptyForm: SessionFormState = {
   name: '',
-  group: GROUPS[0],
+  group: '',
   date: '',
   startTime: '',
   endTime: '',
@@ -87,12 +89,12 @@ const SessionsPage = () => {
     queryFn: () => listSessions({ status: statusFilter === 'ALL' ? undefined : statusFilter, keyword: search.trim() || undefined }),
   })
   const nfcTagsQuery = useQuery({ queryKey: ['nfcTags'], queryFn: () => listNfcTags() })
-  // 그룹은 utils/groups.ts 하드코딩 대신 실제 API(GET /api/users/groups)로 조회 - UsersPage.tsx와 동일한 패턴.
-  // API가 아직 안 왔거나 빈 배열이면 그때만 하드코딩 목록(GROUPS)을 폴백으로 사용
-  const groupsQuery = useQuery({ queryKey: ['userGroups'], queryFn: listUserGroups })
+  // 그룹은 GET /api/groups(그룹 마스터, STEP32)로 조회 - 존재하는 그룹명만 정직하게 보여줌. 목록이 비어있으면
+  // (그룹을 하나도 안 만들었으면) select도 그냥 비어있음 - "그룹 관리" 화면에서 먼저 만들면 됨
+  const groupsQuery = useQuery({ queryKey: ['groups'], queryFn: listGroups })
   const sessions = sessionsQuery.data ?? []
   const nfcTags = nfcTagsQuery.data ?? []
-  const groupOptions = groupsQuery.data && groupsQuery.data.length > 0 ? groupsQuery.data : GROUPS
+  const groupOptions = groupsQuery.data?.map((g) => g.name) ?? []
 
   const invalidateSessions = () => queryClient.invalidateQueries({ queryKey: ['sessions'] })
 
@@ -131,8 +133,8 @@ const SessionsPage = () => {
   const detailSession = sessions.find((s) => s.id === detailId) ?? null
 
   const openCreate = () => {
-    // 기본 선택 그룹도 실제 그룹 목록 기준으로 (GROUPS[0]이 실제로 존재하지 않는 그룹일 수 있어서)
-    setForm({ ...emptyForm, group: groupOptions[0] ?? GROUPS[0] })
+    // 기본 선택 그룹도 실제 그룹 마스터 목록 기준 - 그룹이 하나도 없으면 빈 문자열(select도 비어있음)
+    setForm({ ...emptyForm, group: groupOptions[0] ?? '' })
     setEditingId(null)
     setFormError(null)
     setFormMode('create')
