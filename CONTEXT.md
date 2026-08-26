@@ -94,7 +94,7 @@ src/
 |---|---|
 | 로그인 | ✅ 완료 (아이디/비밀번호 + 구글/카카오 소셜 로그인·가입 전부 실 연동 검증됨, 2026-07-25) |
 | 대시보드 | 🟡 카드4개 중 오늘세션수/진행중인세션 2개만 실 API 연동(STEP30), 나머지(오늘출석률/활성사용자/차트/진행세션목록/최근출석표)는 대응 API 없어 빈 상태 |
-| 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작, NFC태그 표시 버그 STEP30에서 수정) |
+| 출석 세션 관리 | ✅ 완료 (필터/검색 + 생성·수정·상세 모달 + 시작/종료 상태 전이 전부 동작, NFC태그 표시 버그 STEP30에서 수정, 삭제 버튼 STEP34에서 추가) |
 | 출석 현황 | ✅ 완료 (필터 + 상태 수정 모달 동작) |
 | 사용자 관리 | ✅ 완료 (필터/검색 + 생성·상세·수정 모달 전부 동작) |
 | NFC 태그 관리 | ✅ 완료 (필터 + 등록·수정 모달 + 활성/비활성 토글 전부 동작) |
@@ -360,10 +360,18 @@ src/
   - **`NotificationsPage.tsx` 흰 화면 버그**: STEP32에서 `utils/groups.ts`를 비우면서 "더 이상 import하는 곳 없음"이라고 판단했었는데, 실제로는 이 화면이 여전히 `GROUPS`를 import하고 있었음(누락) - 브라우저에서 `SyntaxError: does not provide an export named 'GROUPS'`로 앱 전체가 흰 화면이 됨. `SessionsPage.tsx`/`UsersPage.tsx`와 동일하게 `listGroups()`(그룹 마스터 API) 기반으로 전환
   - **세션 수정 시 500 에러**: `SessionsPage.tsx`의 세션 생성/수정 제출부가 `<input type="time">` 값("HH:mm")을 그대로 `SessionRequest.startTime`/`endTime`에 보내고 있었는데, BE `SessionRequest.startTime`/`endTime`은 `LocalDateTime` 타입이라 완전한 ISO datetime을 기대함 - `${form.date}T${form.startTime}:00` 형태로 날짜와 합쳐서 보내도록 수정(BE 쪽 확인으로 원인 특정됨)
   - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/NotificationsPage.tsx`, `pages/SessionsPage.tsx`
+- STEP34 (2026-08-26, 완료): 세션 관리 화면에 세션 삭제 버튼 추가(사용자 리포트 - "세션 삭제가 안 됨"). 브랜치 `feat/step34-session-delete`
+  - **원인**: `api/sessions.ts`에 `deleteSession`(`DELETE /api/sessions/:id`) 함수 자체는 이미 있었는데 `SessionsPage.tsx` 어디서도 호출하는 곳이 없었음 - 목록 액션 컬럼에 삭제 버튼이 아예 없어서 UI 레벨에서부터 막혀있던 것으로 확인됨(백엔드 API 자체의 문제는 아니었음)
+  - **수정**: `GroupsPage.tsx`의 삭제 패턴(별도 폼 없이 `window.confirm` 확인 후 `deleteMutation.mutate` → 성공 시 목록만 invalidate, 실패해도 별도 에러 메시지 없이 목록에 남아있는 것으로만 알 수 있음)을 그대로 재사용해 세션 목록 액션 컬럼에 "삭제" 버튼 추가
+  - 사용자가 실사용 테스트로 정상 동작 확인(2026-08-26). 단 ACTIVE/COMPLETED 상태 세션 삭제 시 백엔드가 막아주는지는 아직 미확인 - 필요하면 상태별로 버튼을 숨기는 처리 추가 검토
+  - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/SessionsPage.tsx`
+  - 커밋/develop 머지까지 Claude가 `device_bash`로 직접 처리(사용자 요청) - 머지는 STEP32 방식대로 checkout 없이 `commit-tree`+`update-ref`로 처리, 도중 발생한 `.git/index.lock` 잔존 문제는 rename으로 우회. 푸시는 사용자가 로컬에서 직접 진행
 
 ## 다음 작업
 
-> 2026-08-26: STEP33에서 알림 관리 화면 흰 화면 버그 + 세션 수정 500 에러 둘 다 수정 완료. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
+> 2026-08-26: STEP34에서 세션 삭제 버튼 추가 완료. 사용자가 리포트한 버그 2건 중 하나 해결, 나머지 하나가 다음 작업으로 남음:
+> - **출석 현황 미배정 버그(미해결)**: 이미 날짜가 지난 세션인데도 대상자들이 출석/지각/결석 어디에도 배정 안 되는 문제. `AttendancePage.tsx`는 순수 조회 화면이라 프론트 원인이 아니고, 백엔드의 세션 자동 종료(또는 수동 "세션 종료" 클릭 시)에 물려있는 "미출석자 자동 결석 처리"(`autoAbsentEnabled` 설정) 로직이 지난 날짜 세션엔 안 걸린 것으로 추정됨(확진은 백엔드 소스 확인 필요) - 이 리포에 백엔드 코드가 없어서 다음 진행은 백엔드 쪽 확인부터 필요
+> - **세션 삭제 엣지 케이스(미확인)**: ACTIVE/COMPLETED 세션도 삭제가 허용되는지, 백엔드가 상태별로 막는지 아직 실사용 테스트 안 함
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
