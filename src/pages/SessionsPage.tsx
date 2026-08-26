@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { sessionStatusMeta } from '../utils/badgeColors'
-import { closeSession, createSession, listSessions, startSession, updateSession } from '../api/sessions'
+import { closeSession, createSession, deleteSession, listSessions, startSession, updateSession } from '../api/sessions'
 import { listNfcTags } from '../api/nfcTags'
 import { listGroups } from '../api/groups'
 import type { Session, SessionRequest, SessionStatus } from '../types/session'
@@ -118,6 +118,9 @@ const SessionsPage = () => {
   })
   const startMutation = useMutation({ mutationFn: startSession, onSuccess: invalidateSessions })
   const closeMutation = useMutation({ mutationFn: closeSession, onSuccess: invalidateSessions })
+  // 세션 삭제 - GroupsPage.tsx의 삭제 패턴과 동일: 별도 폼이 없어서 성공/실패 표시 없이 invalidate만
+  // (실패하면 목록에 그대로 남아있는 걸로 알 수 있음 - 백엔드가 어떤 조건에서 삭제를 막는지는 아직 미확인)
+  const deleteMutation = useMutation({ mutationFn: deleteSession, onSuccess: invalidateSessions })
   // TODO: 세션 취소(POST /api/sessions/:id/cancel)는 백엔드엔 있는데 목업/화면 정의에 버튼이 없어서 아직 연결 안 함
   // - 필요해지면 api/sessions.ts의 cancelSession을 여기서 mutation으로 감싸고 상세 모달에 버튼만 추가하면 됨
 
@@ -197,6 +200,12 @@ const SessionsPage = () => {
     else if (session.status === 'ACTIVE') closeMutation.mutate(session.id)
   }
 
+  // 삭제는 영구 삭제라 되돌릴 수 없음 - 확인 후 진행
+  const handleDelete = (session: Session) => {
+    const ok = window.confirm(`"${session.name}" 세션을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)
+    if (ok) deleteMutation.mutate(session.id)
+  }
+
   const muted = (value: string) => <span className="text-[#6b7280]">{value}</span>
 
   const columns: TableColumn<Session>[] = [
@@ -224,6 +233,9 @@ const SessionsPage = () => {
           </Button>
           <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
             수정
+          </Button>
+          <Button variant="secondary" size="sm" className="text-red-600" onClick={() => handleDelete(row)}>
+            삭제
           </Button>
         </div>
       ),
