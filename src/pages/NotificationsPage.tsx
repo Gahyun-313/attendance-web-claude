@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input, Modal, Select, Table } from '../components'
 import type { TableColumn } from '../components'
 import { notificationStatusMeta } from '../utils/badgeColors'
-import { GROUPS } from '../utils/groups'
+import { listGroups } from '../api/groups'
 import type { NotificationItem, NotificationStatus } from '../types/notification'
 import { cancelNotification, createNotification, listNotifications } from '../api/notifications'
 
@@ -18,8 +18,6 @@ const FILTER_TABS: { value: NotificationStatus | 'ALL'; label: string }[] = [
   { value: 'FAILED', label: '실패' },
 ]
 
-const TARGET_OPTIONS = ['전체', ...GROUPS]
-
 interface NotificationFormState {
   title: string
   content: string
@@ -27,7 +25,7 @@ interface NotificationFormState {
   scheduledAt: string
 }
 
-const emptyForm: NotificationFormState = { title: '', content: '', target: TARGET_OPTIONS[0], scheduledAt: '' }
+const emptyForm: NotificationFormState = { title: '', content: '', target: '전체', scheduledAt: '' }
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient()
@@ -41,6 +39,11 @@ const NotificationsPage = () => {
     queryFn: () => listNotifications(filter === 'ALL' ? undefined : filter),
   })
   const notifications = notificationsQuery.data ?? []
+
+  // 대상 그룹 select는 그룹 마스터 API(GET /api/groups, STEP32)로 조회 - SessionsPage/UsersPage와 동일 패턴
+  const groupsQuery = useQuery({ queryKey: ['groups'], queryFn: listGroups })
+  const groupOptions = groupsQuery.data?.map((g) => g.name) ?? []
+  const targetOptions = ['전체', ...groupOptions]
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
   const createMutation = useMutation({ mutationFn: createNotification, onSuccess: invalidate })
@@ -169,7 +172,7 @@ const NotificationsPage = () => {
             />
           </div>
           <Select label="대상 그룹" value={form.target} onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}>
-            {TARGET_OPTIONS.map((t) => (
+            {targetOptions.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>

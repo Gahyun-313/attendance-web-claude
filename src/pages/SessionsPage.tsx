@@ -173,8 +173,10 @@ const SessionsPage = () => {
       description: form.name.trim(), // 목업/화면 정의엔 별도 "설명" 필드가 없어서 세션명으로 채움 (TODO: 필요하면 폼에 필드 추가)
       groupName: form.group,
       sessionDate: form.date.trim(),
-      startTime: form.startTime.trim(),
-      endTime: form.endTime.trim(),
+      // BE SessionRequest.startTime/endTime은 LocalDateTime이라 "HH:mm"만 보내면 JSON 파싱 단계에서 400/500 남
+      // (input type="time" 값은 "HH:mm"뿐이라 날짜(form.date)와 합쳐서 완전한 ISO datetime으로 보내야 함)
+      startTime: `${form.date.trim()}T${form.startTime.trim()}:00`,
+      endTime: `${form.date.trim()}T${form.endTime.trim()}:00`,
       lateThresholdMinutes: Number(form.lateThresholdMinutes) || 10,
       location: form.location.trim(),
       nfcTagId: Number(form.nfcTagId),

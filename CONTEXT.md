@@ -356,10 +356,14 @@ src/
   - **`UsersPage.tsx` 생성/수정 실패 표시 버그도 같이 수정**: `SessionsPage.tsx`(STEP31)와 똑같이 `createMutation`/`updateMutation`에 `onError`가 없고 무조건 모달을 닫던 버그였음 - 같은 패턴(`extractError`, 성공시에만 닫힘)으로 수정
   - `npx tsc --noEmit`는 로컬에서 사용자가 직접 확인 필요 - 변경/신규 파일: `types/group.ts`(신규), `api/groups.ts`(신규), `pages/GroupsPage.tsx`(신규), `router.tsx`, `components/Layout.tsx`, `pages/SessionsPage.tsx`, `pages/UsersPage.tsx`, `utils/groups.ts`(내용만 비움)
   - **워크플로 변경**: 사용자가 이번 STEP부터 브랜치 생성/커밋/머지까지 Claude가 직접 처리하도록 요청(기존엔 안내만 하고 사용자가 로컬에서 직접 실행) - 상세는 아래 §결정 사항 히스토리 참고
+- STEP33 (2026-08-26, 완료): STEP32 이후 실사용 중 발견된 버그 2건 수정. 브랜치 `fix/step33-notifications-groups-and-session-datetime`
+  - **`NotificationsPage.tsx` 흰 화면 버그**: STEP32에서 `utils/groups.ts`를 비우면서 "더 이상 import하는 곳 없음"이라고 판단했었는데, 실제로는 이 화면이 여전히 `GROUPS`를 import하고 있었음(누락) - 브라우저에서 `SyntaxError: does not provide an export named 'GROUPS'`로 앱 전체가 흰 화면이 됨. `SessionsPage.tsx`/`UsersPage.tsx`와 동일하게 `listGroups()`(그룹 마스터 API) 기반으로 전환
+  - **세션 수정 시 500 에러**: `SessionsPage.tsx`의 세션 생성/수정 제출부가 `<input type="time">` 값("HH:mm")을 그대로 `SessionRequest.startTime`/`endTime`에 보내고 있었는데, BE `SessionRequest.startTime`/`endTime`은 `LocalDateTime` 타입이라 완전한 ISO datetime을 기대함 - `${form.date}T${form.startTime}:00` 형태로 날짜와 합쳐서 보내도록 수정(BE 쪽 확인으로 원인 특정됨)
+  - `npx tsc --noEmit` 통과 확인. 변경 파일: `pages/NotificationsPage.tsx`, `pages/SessionsPage.tsx`
 
 ## 다음 작업
 
-> 2026-08-26: STEP32에서 그룹 마스터 API 연동 완료(GroupsPage 신설 + 세션/사용자 그룹 select 전환). 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
+> 2026-08-26: STEP33에서 알림 관리 화면 흰 화면 버그 + 세션 수정 500 에러 둘 다 수정 완료. 현재 남은 항목은 아래 "기타(계속 유지)" 상시 확인 사항뿐 - 신규로 착수할 화면/기능 작업은 없음.
 
 **기타 (계속 유지)**
 - Access Token 실제 만료(1시간) 후 401 자동 갱신이 잘 도는지 실사용 테스트 필요(STEP23) — 로그인 후 1시간 넘게 켜두고 확인
