@@ -42,9 +42,9 @@ Figma와 디자인 컨텍스트를 바탕으로 화면 코드는 **AI 개발 도
 
 | 구성 | 사용자 | 역할 |
 | --- | --- | --- |
-| 🎓 Android 앱 | 출석 대상자(학생) | 출석 체크, 본인 기록 조회, 정정 요청, 알림 확인 |
+| 🎓 [학생용 Android 앱](https://github.com/Gahyun-313/attendance-app) | 출석 대상자(학생) | 출석 체크, 본인 기록 조회, 정정 요청, 알림 확인 |
 | 🖥️ 어드민 웹 | 관리자 | 세션·출석 기록·사용자·NFC 태그·알림 관리 |
-| ⚙️ 백엔드 API | 앱·웹 공통 | 인증, 출석 검증, 데이터 저장·조회와 관리 기능 제공 |
+| ⚙️ [백엔드 API](https://github.com/Gahyun-313/attendance-be) | 앱·웹 공통 | 인증, 출석 검증, 데이터 저장·조회와 관리 기능 제공 |
 
 ### 서비스 연동 구조
 
@@ -64,14 +64,6 @@ Figma와 디자인 컨텍스트를 바탕으로 화면 코드는 **AI 개발 도
 ```
 
 Android 앱은 현재 Fake Repository 기반으로 개발 중이며, 실제 서버 연동은 예정되어 있습니다. 어드민 웹은 로컬 환경에서 AWS Backend와 연동해 관리자 기능을 검증했습니다.
-
-### 관련 저장소
-
-| 프로젝트 | 저장소 |
-| --- | --- |
-| 🎓 학생용 Android 앱 | [attendance-app](https://github.com/Gahyun-313/attendance-app) |
-| 🖥️ 관리자용 어드민 웹 | 현재 저장소 |
-| ⚙️ 백엔드 API | [attendance-be](https://github.com/Gahyun-313/attendance-be) |
 
 </details>
 
